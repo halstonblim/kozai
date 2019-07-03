@@ -414,6 +414,9 @@ class kozai_struct
 		void set_octupole(bool octupole_i) {octupole=octupole_i;}
 		bool get_octupole() {return octupole;}
 
+		void set_octupole_elements(bool octupole_i) {octupole=octupole_i;}
+		bool get_octupole_elements() {return octupole;}
+
 		void set_pericenter(bool pericenter_i) {pericenter=pericenter_i;}
 		bool get_pericenter() {return pericenter;}
 
