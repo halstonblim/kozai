@@ -89,7 +89,6 @@ int main(int argc, char **argv){
 	double max_e=0.;
 	int status;
 
-
 	//First, initialize the Kozai structure
 	kozai_struct *kozai = new kozai_struct;
 	set_parameters(argc, argv, kozai, tmax, delta_t, IGNORE_GSL_ERRORS);
@@ -261,23 +260,58 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
 	double j2n = abs(j2);
 	vec n1 = j1/j1n;
 	vec n2 = j2/j2n;
-
 	double e1n = abs(e1);
 	double e2n = abs(e2);
 	vec u1 = e1/e1n;
 	vec u2 = e2/e2n;
-
 	double j1n2 = j1*n2;
 	double j1u2 = j1*u2;
 	double e1n2 = e1*n2;
 	double e1u2 = e1*u2;
-
 	vec j1xn2 = j1^n2;
 	vec j1xu2 = j1^u2;
 	vec e1xn2 = e1^n2;
 	vec e1xu2 = e1^u2;
-
 	double L1L2 = L1 / L2;
+
+	//trig for checking
+	vec v1 = n1^u1;
+	vec v2 = n2^u2;
+	double G1 = L1 * j1n;
+	double G2 = L2 * j2n;
+	double cinc = n1*n2;
+	double m = m1+m2; 
+	double mtot = m + m3;
+	double Gtot = sqrt(sqr(G1) + sqr(G2) + 2. * cinc * G1 * G2);
+	double C2 = (pow(G,2)*pow(G2,-3)*pow(L1,4)*pow(L2,-3)*pow(m,7)*pow(m1,-3)*pow(m2,-3)*pow(m3,7)*pow(mtot,-3))/16.;
+	double C3 = (-15*m1*(m1 - m2)*m2*pow(a1,3)*pow(a2,-1.5)*pow(G,3.5)*pow(G2,-5)*pow(m,3)*pow(m3,6)*pow(mtot,-2.5))/64.;
+
+
+	
+	double c2inc = 2.*sqr(cinc) - 1.;
+	double sinc = sqrt(1.-sqr(cinc));
+	double cscinc = 1./sinc;
+	double s2inc = 2.*sinc*cinc;
+	double sincsq = sqr(sinc);
+	double cotinc = cinc / sinc;
+	double sinc1 = sinc * G2 / Gtot;
+	double cinc1 = sqrt(1.-sqr(sinc1));
+	double cotinc1 = cinc1 / sinc1;
+	double cscinc1 = 1. / sinc1;
+	double cg1 = (n2*v1) / sinc;
+	double c2g1 = 2.*sqr(cg1) - 1.;
+	double sg1 = (n2*u1) / sinc;
+	double s2g1 = 2.*sg1*cg1;
+	double sinc2 = sinc * G1 / Gtot;
+	double cinc2 = sqrt(1.-sqr(sinc2));
+	double cg2 = (n1*v2) / sinc;
+	double c2g2 = 2.*sqr(cg2) - 1.;
+	double sg2 = (n1*u2) / sinc;
+	double s2g2 = 2.*sg2*cg2;
+	double costheta = -cg1*cg2-cinc*sg1*sg2;
+
+	double B = 2. - 7*c2g1*sqr(e1) + 5*pow(e1n,2);
+	double A = 4. + 3*sqr(e1n)-(5*B*sincsq)/2.;
 
 	//Compute the (local) quadrupole timescale
 	double tsec = (sqrt((m1+m2)/(G*pow(a1,3.)))*pow(a2,3.)*pow(1.-sqr(e2n),1.5) /m3);
@@ -298,20 +332,60 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
 	//Add the octupole-order secular evolution equations
 	if(kozai->get_octupole() == true){
 		double octo_coef = 1.171875*((m1-m2)/(m1+m2)*(a1/a2)*(e2n/sqr(j2n)))/tsec;
-		dj1dt += octo_coef*((((2.*(e1u2*j1n2+e1n2*j1u2)*j1)
+
+		dj1dt += -octo_coef*((((2.*(e1u2*j1n2+e1n2*j1u2)*j1)
 				+ 2.*(j1u2*j1n2-7.*e1u2*e1n2)*e1)^n2) + ((((2.*e1n2*j1n2)*j1)
 				+ (1.6*sqr(e1n) - 0.2 - 7.*sqr(e1n2) + sqr(j1n2))*e1)^u2));
-		de1dt += octo_coef*(((((2.*e1n2*j1n2)*e1) + (1.6*sqr(e1n) - 0.2 - 7.*sqr(e1n2)   
+		de1dt += -octo_coef*(((((2.*e1n2*j1n2)*e1) + (1.6*sqr(e1n) - 0.2 - 7.*sqr(e1n2)   
 				+ sqr(j1n2))*j1)^u2) + (((2.*(e1u2*j1n2+e1n2*j1u2)*e1) 
 				+ (2.*(j1n2*j1u2-7*e1n2*e1u2)*j1))^n2) + (3.2*e1u2*(j1^e1)));
-		dj2dt += octo_coef*L1L2*((2*(((e1n2*j1u2)*n2) + ((e1u2*j1n2)*n2)
+		dj2dt += -octo_coef*L1L2*((2*(((e1n2*j1u2)*n2) + ((e1u2*j1n2)*n2)
 				+ (e1n2*j1n2)*u2)^j1) + ((((2*j1u2*j1n2)*n2) - ((14.*e1u2*e1n2)*n2) 
 				+ ((1.6*sqr(e1n) - 0.2 - 7.*sqr(e1n2) + sqr(j1n2))*u2))^e1));
-		de2dt += octo_coef*(L1L2/j2n)*(2*(((e1n2*((j1*e2)*u2))
+		de2dt += -octo_coef*(L1L2/j2n)*(2*(((e1n2*((j1*e2)*u2))
 				+ (j1n2*((e1*e2)*u2)) + (((sqr(j2n)/e2n)*e1n2*j1n2)*n2))^j1) + ((((2.*e2n*j1u2*j1n2)*u2)
 				- ((14.*e1n2*(e1*e2))*u2) + (sqr(j2n)/e2n)*((1.6*sqr(e1n) - 0.2 - 7.*sqr(e1n2)
 				+ sqr(j1n2))*n2))^e1) - (((2.*(0.2-1.6*sqr(e1n))*e1u2*e2) + ((14.*e1n2*j1u2*j1n2)*e2)
 				+ (7.*e1u2*(1.6*sqr(e1n) - 0.2 - 7.*sqr(e1n2) + sqr(j1n2))*e2))^n2));
+		// // de1dt Scalar test
+		// double de1dtoctnaoz =  -(A*C3*cg2*e2n*j1n*sg1*pow(L1,-1)) + A*C3*cg1*cinc*e2n*j1n*sg2*pow(L1,-1) + 35*C3*costheta*e2n*j1n*s2g1*sincsq*pow(e1n,2)*pow(L1,-1) - 10*C3*cg1*cinc*e2n*sg2*sincsq*pow(L1,-1)*pow(j1n,3);
+		// de1dt += de1dtoctnaoz * u1;
+		// dj1dt += (-e1n / j1n) * de1dtoctnaoz * n1;
+
+		// // de2dt Scalar test
+		// double de2dtoctnaoz =  -(C3*e1n*pow(G2,-1)*(A*(-(cg2*cinc*sg1) + cg1*sg2) + 10*cg2*cinc*sg1*sincsq*pow(j1n,2))*pow(j2n,2));
+		// de2dt += de2dtoctnaoz * u2;
+		// dj2dt += (-e2n / j2n) * de2dtoctnaoz * n2;
+
+		// // di1dt Scalar Test
+		// double inc = kozai->get_inc();
+		// double inc1 = kozai->get_inc1();
+		// double di1dtoctnaoz = A*C3*cg2*cinc*cotinc*e1n*e2n*G2*sg1*pow(G1,-2) - A*C3*cg2*cinc*cotinc1*e1n*e2n*G2*sg1*pow(G1,-2) - A*C3*cg1*cotinc*e1n*e2n*G2*sg2*pow(G1,-2) + A*C3*cg1*cotinc1*e1n*e2n*G2*sg2*pow(G1,-2) + 10*C3*cg2*cinc*cotinc1*e1n*e2n*G2*sg1*sincsq*pow(G1,-2) - 10*C3*cg2*e1n*e2n*G2*sg1*sinc*pow(cinc,2)*pow(G1,-2) - 10*C3*cg2*cinc*cotinc1*e2n*G2*sg1*sincsq*pow(e1n,3)*pow(G1,-2) + 10*C3*cg2*e2n*G2*sg1*sinc*pow(cinc,2)*pow(e1n,3)*pow(G1,-2) + A*C3*cg2*cotinc*e1n*e2n*sg1*pow(G1,-1) - A*C3*cg1*cinc*cotinc*e1n*e2n*sg2*pow(G1,-1) + 10*C3*cg1*e1n*e2n*sg2*sinc*pow(cinc,2)*pow(G1,-1) - 35*C3*cinc*costheta*e2n*s2g1*sinc*pow(e1n,3)*pow(G1,-1) - 10*C3*cg1*e2n*sg2*sinc*pow(cinc,2)*pow(e1n,3)*pow(G1,-1);
+		// de1dt += ((e1n*sg1)*n1) * di1dtoctnaoz;
+		// dj1dt += ((-j1n*sg1)*u1 + (-j1n*cg1)*v1) * di1dtoctnaoz;
+
+		// // di2dt Scalar Test
+		// double di2dtoctnaoz = -(A*C3*cg2*cinc*cotinc*e1n*e2n*sg1*pow(G2,-1)) + A*C3*cg2*cscinc*e1n*e2n*sg1*pow(G2,-1) + 10*C3*cg1*cinc*e1n*e2n*sg2*sinc*pow(G2,-1) + 10*C3*cg2*e1n*e2n*sg1*sinc*pow(cinc,2)*pow(G2,-1) - 35*C3*costheta*e2n*s2g1*sinc*pow(e1n,3)*pow(G2,-1) - 10*C3*cg1*cinc*e2n*sg2*sinc*pow(e1n,3)*pow(G2,-1) - 10*C3*cg2*e2n*sg1*sinc*pow(cinc,2)*pow(e1n,3)*pow(G2,-1);
+		// de2dt += ((e2n*sg2)*n2) * di2dtoctnaoz;
+		// dj2dt += ((-j2n*sg2)*u2 + (-j2n*cg2)*v2) * di2dtoctnaoz;
+
+		// // dhdt Scalar test
+		// double dh1dtoctnaoz = -(C3*cscinc1*e1n*e2n*sinc*pow(G1,-1)*(5*B*cinc*costheta - A*sg1*sg2 + 10*sg1*sg2*(1 - 3*pow(cinc,2))*pow(j1n,2)));
+		// de1dt += ((e1n*cinc1)*v1 + (-e1n*cg1*sinc1)*n1) * dh1dtoctnaoz;
+		// dj1dt += ((j1n*cg1*sinc1)*u1 + (-j1n*sg1*sinc1)*v1) * dh1dtoctnaoz;
+		// de2dt += ((e2n*cinc2)*v2 + (-e2n*cg2*sinc2)*n2) * dh1dtoctnaoz;
+		// dj2dt += ((j2n*cg2*sinc2)*u2 + (-j2n*sg2*sinc2)*v2) * dh1dtoctnaoz;
+
+		// // dg1dt scalar test
+		// double dg1dtoctnaoz = -(C3*e2n*(-(pow(e1n,-1)*(costheta*(2 + 3*A - 10*pow(cinc,2)) + 10*cinc*sg1*sg2*sincsq*(1 - 3*pow(e1n,2)))*pow(G1,-1)*pow(j1n,2)) + e1n*(cinc*pow(G1,-1) + pow(G2,-1))*(-5*B*cinc*costheta + sg1*sg2*(A + 10*(-1 + 3*pow(cinc,2))*pow(j1n,2)))));
+		// de1dt += ((e1n)*v1) * dg1dtoctnaoz;
+		// dj1dt += 0.;
+
+		// // dg2dt scalar test
+		// double dg2dtoctnaoz = C3*e1n*(costheta*(A*pow(e2n,-1)*(1 + 4*pow(e2n,2))*pow(G2,-1) + 5*B*cinc*e2n*(pow(G1,-1) + cinc*pow(G2,-1))) + sg1*sg2*(10*cinc*sincsq*pow(e2n,-1)*(1 + 4*pow(e2n,2))*pow(G2,-1)*pow(j1n,2) - e2n*(pow(G1,-1) + cinc*pow(G2,-1))*(A + 10*(-1 + 3*pow(cinc,2))*pow(j1n,2))));
+		// de2dt += ((e2n)*v2) * dg2dtoctnaoz;
+		// dj2dt += 0.;
+
 	}
 
 	//Add the pericenter precession of the inner binary
@@ -414,8 +488,8 @@ void set_parameters(int argc, char **argv, kozai_struct *kozai, double &t_end, d
 		{"omega1",1,  0, 'l'},
 		{"omega2",1,  0, 'L'},
 		{"inc"   ,1,  0, 'i'},
-		{"rad1"   ,1,  0, 'c'},
-		{"rad2"   ,1,  0, 'C'},
+		{"rad1"   ,1,  0, 'b'},
+		{"rad2"   ,1,  0, 'B'},
 		{"chi1"   ,1,  0, 'c'},
 		{"chi2"   ,1,  0, 'C'},
 		{"theta1"   ,1,  0, 't'},
@@ -436,7 +510,7 @@ void set_parameters(int argc, char **argv, kozai_struct *kozai, double &t_end, d
 	};
 
 	while ((c = getopt_long (argc, argv, 
-					"m:M:n:a:A:e:E:g:G:l:L:i:c:C:t:T:u:U:qopsSrId:D:b:B:h",
+					"m:M:n:a:A:e:E:g:G:l:L:i:b:B:c:C:t:T:u:U:qopsSrId:D:h",
 					longopts,&option_index)) != -1)
 	switch (c)
     {
