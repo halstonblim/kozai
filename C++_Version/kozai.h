@@ -57,6 +57,7 @@ const double c870o2299= 870./2299.;
 const double SMALLNUMBER=1e-10;
 const double TWOPI=6.28318530718;
 const double PI=3.14159265359;
+const double Pi=PI;
 
 class kozai_struct;
 
@@ -111,6 +112,9 @@ class kozai_struct
 		//flags determining what terms to include
 		bool quadrupole;
 		bool octupole;
+		bool octupoleelements;
+		bool crossnaoz;
+		bool crosswill;
 		bool pericenter;
 		bool spinorbit;
 		bool spinspin;
@@ -135,7 +139,7 @@ class kozai_struct
 			  double ig1=199.31831, double ig2=237.15944, double im1=24.22645, double im2=14.999986, double im3=21.509239,
 			  double iOmega1=321.97666, double iOmega2=141.97666, double ir1=0, double ir2=0,  double ichi1=1, double ichi2=1,
 			  double itheta1=0, double itheta2=0, double iphi1=0, double iphi2=0,
-			  bool iquad=false, bool ioct=false, bool iperi=false, bool iso=false, bool iss=false, bool rad=false)
+			  bool iquad=false, bool ioct=false, bool ioctel=false, bool icrossnaoz=false, bool icrosswill=false, bool iperi=false, bool iso=false, bool iss=false, bool rad=false)
 			{	
 				a1=ia1*AU;
 				a2=ia2*AU;
@@ -159,6 +163,9 @@ class kozai_struct
 				phi2=iphi2*DEG;
 				quadrupole=iquad;
 				octupole=ioct;
+				octupoleelements=ioctel;
+				crossnaoz=icrossnaoz;
+				crosswill=icrosswill;
 				pericenter=iperi;
 				spinorbit=iso;
 				spinspin=iss;
@@ -414,8 +421,14 @@ class kozai_struct
 		void set_octupole(bool octupole_i) {octupole=octupole_i;}
 		bool get_octupole() {return octupole;}
 
-		void set_octupole_elements(bool octupole_i) {octupole=octupole_i;}
-		bool get_octupole_elements() {return octupole;}
+		void set_octupole_elements(bool octupoleel_i) {octupoleelements=octupoleel_i;}
+		bool get_octupole_elements() {return octupoleelements;}
+
+		void set_1PNcross_naoz(bool crossnaoz_i) {crossnaoz=crossnaoz_i;}
+		bool get_1PNcross_naoz() {return crossnaoz;}
+
+		void set_1PNcross_will(bool crosswill_i) {crosswill=crosswill_i;}
+		bool get_1PNcross_will() {return crosswill;}
 
 		void set_pericenter(bool pericenter_i) {pericenter=pericenter_i;}
 		bool get_pericenter() {return pericenter;}
