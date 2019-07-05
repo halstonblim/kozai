@@ -396,12 +396,12 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
 	if(kozai->get_1PNcross_naoz() == true){
 		// dGdt Naoz 2013b ez. C8
 		double dG1dtintnaoz = (9*a1*m1*m2*m3*s2g1*sincsq*pow(a2,-3)*pow(c,-2)*pow(e1n,2)*pow(G,2)*pow(j2n,-3)*pow(m,-2)*(m1*m2 + pow(m1,2) + pow(m2,2)))/16.;
-		cout << t / YEAR << " " << dG1dtintnaoz << " ";
+
 		// de1dt Naoz 2013b eq. C7 (typo)
 		double de1dtintnaoz = (-9*e1n*j1n*m3*s2g1*sincsq*pow(a1,0.5)*pow(a2,-3)*pow(c,-2)*pow(G,1.5)*pow(j2n,-3)*pow(m,-1.5)*(m1*m2 + pow(m1,2) + pow(m2,2)))/16.;
 		de1dt += de1dtintnaoz * u1;
 		dj1dt += (-e1n / j1n) * de1dtintnaoz * n1;
-		cout << de1dtintnaoz << " ";
+
 		// de2dt Naoz 2013b text between eq. C8 and C9, also Naoz 2013a eq. A33 
 		// double de2dtintnaoz = 0;
 		// de2dt += de2dtintnaoz * u2;
@@ -411,30 +411,30 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
 		double di1dtintnaoz = -(cscinc1*dG1dtintnaoz*(-cinc1 + cscinc*sinc2)*pow(G1,-1));
 		de1dt += ((e1n*sg1)*n1) * di1dtintnaoz;
 		dj1dt += ((-j1n*sg1)*u1 + (-j1n*cg1)*v1) * di1dtintnaoz;
-		cout << di1dtintnaoz << " " ;
+
 		// di2dt Naoz 2013b eq. C12
 		double di2dtoctnaoz = cscinc*dG1dtintnaoz*pow(G2,-1);
 		de2dt += ((e2n*sg2)*n2) * di2dtoctnaoz;
 		dj2dt += ((-j2n*sg2)*u2 + (-j2n*cg2)*v2) * di2dtoctnaoz;
-		cout << di2dtoctnaoz << " ";
+
 		// dh1dt  Naoz 2013b eq. B8
 		double dh1dtintnaoz = -(cscinc1*m3*pow(a2,-3)*pow(c,-2)*pow(G,1.5)*pow(j1n,-2)*pow(j2n,-3)*pow(m,-1.5)*pow(mtot,-0.5)*(16*j2n*(4*m1 + 4*m2 + 3*m3)*sinc*pow(a2,0.5)*(-1 + pow(e1n,2))*pow(m,1.5) + 3*j1n*s2inc*pow(a1,0.5)*(3*m1*m2*(-2 + pow(e1n,2)) + (2 - 5*pow(e1n,2))*pow(m1,2) + (2 - 5*pow(e1n,2))*pow(m2,2) + 3*c2g1*pow(e1n,2)*(m1*m2 + pow(m1,2) + pow(m2,2)))*pow(mtot,0.5)))/32.;
 		de1dt += ((e1n*cinc1)*v1 + (-e1n*cg1*sinc1)*n1) * dh1dtintnaoz;
 		dj1dt += ((j1n*cg1*sinc1)*u1 + (-j1n*sg1*sinc1)*v1) * dh1dtintnaoz;
 		de2dt += ((e2n*cinc2)*v2 + (-e2n*cg2*sinc2)*n2) * dh1dtintnaoz;
 		dj2dt += ((j2n*cg2*sinc2)*u2 + (-j2n*sg2*sinc2)*v2) * dh1dtintnaoz;
-		cout << dh1dtintnaoz << " ";
+
 		// dg1dt  Naoz 2013b eq. C1 (typo)
 		double dg1dtintnaoz = (pow(a2,-3)*pow(c,-2)*pow(G,2)*pow(j2n,-4)*pow(m,-3)*(m1*m2*(-8*j1n*j2n*(4*m + 3*m3)*pow(a1,0.5)*pow(G,-0.5)*pow(m,1.5) + 3*a1*cinc*pow(a2,-0.5)*pow(G,-0.5)*(-3*m1*m2*(1 + pow(j1n,2)) + (2 - 5*pow(e1n,2))*pow(m1,2) + (2 - 5*pow(e1n,2))*pow(m2,2) + 3*c2g1*pow(e1n,2)*(m1*m2 + pow(m1,2) + pow(m2,2)))*pow(mtot,0.5)) + j2n*m3*pow(a1,0.5)*pow(G,-0.5)*pow(j1n,-1)*pow(m,1.5)*(pow(j1n,2)*(-3*m1*m2 + 5*pow(m1,2) + 5*pow(m2,2)) - 9*(m1*m2 + pow(m1,2) + pow(m2,2))*(c2g1*pow(j1n,2) + 2*cincsq*pow(sg1,2)))))/16.;
 		de1dt += ((e1n)*v1) * dg1dtintnaoz;
 		dj1dt += 0.;
-		cout << dg1dtintnaoz << " ";
+
 
 		// dg2dt  Naoz 2013b eq. C2 (typo)
 		double dg2dtintnaoz = (pow(a2,-3.5)*pow(c,-2)*pow(G,1.5)*pow(j2n,-4)*pow(m,-3)*pow(mtot,-0.5)*(m1*m2*(-3*a1*mtot*(6*m1*m2 - 3*m1*m2*pow(e1n,2) - 2*pow(m1,2) + 5*pow(e1n,2)*pow(m1,2) - 2*pow(m2,2) + 5*pow(e1n,2)*pow(m2,2) + 18*c2g1*sincsq*pow(e1n,2)*(m1*m2 + pow(m1,2) + pow(m2,2)) + 3*c2inc*(3*m1*m2*(1 + pow(j1n,2)) + (-2 + 5*pow(e1n,2))*pow(m1,2) + (-2 + 5*pow(e1n,2))*pow(m2,2))) - 64*cinc*j1n*j2n*(4*m1 + 4*m2 + 3*m3)*pow(a1,0.5)*pow(a2,0.5)*pow(m,1.5)*pow(mtot,0.5)) - 4*pow(a1,-0.5)*pow(G,-0.5)*pow(j1n,-1)*pow(m,-0.5)*(-3*a1*cinc*(-3*m1*m2*(1 + pow(j1n,2)) + (2 - 5*pow(e1n,2))*pow(m1,2) + (2 - 5*pow(e1n,2))*pow(m2,2) + 3*c2g1*pow(e1n,2)*(m1*m2 + pow(m1,2) + pow(m2,2))) + 8*j1n*j2n*(4*m1 + 4*m2 + 3*m3)*pow(a1,0.5)*pow(a2,0.5)*pow(m,1.5)*pow(mtot,-0.5))*(cinc*j1n*m1*m2*mtot*pow(a1,0.5)*pow(G,0.5)*pow(m,0.5) + j2n*m3*pow(a2,0.5)*pow(G,0.5)*pow(m,2)*pow(mtot,0.5))))/64.;
 		de2dt += ((e2n)*v2) * dg2dtintnaoz;
 		dj2dt += 0.;
-		cout << dg2dtintnaoz << endl;
+
 	}
 
 	if(kozai->get_1PNcross_will() == true){
