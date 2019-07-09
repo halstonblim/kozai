@@ -16,6 +16,7 @@ Parameters:\n\
   --m1      mass 1 of inner binary (MSUN)\n\
   --m2      mass 2 of inner binary (MSUN)\n\
   --m3      mass of tertiary (MSUN)\n\
+Orbital Element Initial Conditions:  
   --a1      Semi-major axis of inner binary (AU)\n\
   --a2      Semi-major axis of outer binary (AU)\n\
   --e1      Eccentricity of inner binary\n\
@@ -25,7 +26,28 @@ Parameters:\n\
   --omega1  Longitude of ascending node for inner binary (deg)\n\
   --omega2  Longitude of ascending node for outer binary (deg)\n\
   --inc     Mutual Inclination (deg)\n\
-  --rad1    Radius of mass 1 (RSUN)\n\
+Coordinate Initial Conditions
+  --coordini Use coordinate initial conditions. Overwrites element initial conditions\n\
+  --r1x      x-coordinate of body 1 (AU) \n\
+  --r1y      y-coordinate of body 1 (AU) \n\
+  --r1z      z-coordinate of body 1 (AU) \n\
+  --r2x      x-coordinate of body 2 (AU) \n\
+  --r2y      y-coordinate of body 2 (AU) \n\
+  --r2z      z-coordinate of body 2 (AU) \n\
+  --r3x      x-coordinate of body 3 (AU) \n\
+  --r3y      y-coordinate of body 3 (AU) \n\
+  --r3z      z-coordinate of body 3 (AU) \n\
+  --v1x      x-velocity of body 1 (AU) \n\
+  --v1y      y-velocity of body 1 (AU) \n\
+  --v1z      z-velocity of body 1 (AU) \n\
+  --v2x      x-velocity of body 2 (AU) \n\
+  --v2y      y-velocity of body 2 (AU) \n\
+  --v2z      z-velocity of body 2 (AU) \n\
+  --v3x      x-velocity of body 3 (AU) \n\
+  --v3y      y-velocity of body 3 (AU) \n\
+  --r3z      z-velocity of body 3 (AU) \n\
+Other Parameters:
+  --rad1   Radius of mass 1 (RSUN)\n\
   --rad2    Radius of mass 2 (RSUN)\n\
   --chi1    Dimmensionless Spin of mass 1 (0-1)\n\
   --chi2    Dimmensionless Spin of mass 2 (0-1)\n\

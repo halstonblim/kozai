@@ -200,7 +200,7 @@ class kozai_struct
 
 		void coord_initialize()
 		{
-			vec zhat = vec(0.,0.,1.);
+			// Utilize Runge Lenze vector, which points towards pericenter
 
 			// Masses
 			double m = m1+m2;
@@ -251,6 +251,7 @@ class kozai_struct
 			}
 			y[18] = a1;
 
+			// Calculat orbital elements
 			inc = get_inc();
 			e1 = e1n;
 			e2 = e2n;
@@ -258,7 +259,6 @@ class kozai_struct
 			g2 = get_g2();
 			Omega1 = get_Omega1();
 			Omega2 = get_Omega2();
-
 		}
 
 
