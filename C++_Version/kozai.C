@@ -95,6 +95,11 @@ int main(int argc, char **argv){
 	//First, initialize the Kozai structure
 	kozai_struct *kozai = new kozai_struct;
 	set_parameters(argc, argv, kozai, tmax, delta_t, IGNORE_GSL_ERRORS);
+
+	if (kozai->get_coordini() == true) {
+		kozai->coord_initialize();
+	}
+	
 	kozai->initialize();
 
 	//Then, set up the GSL integrator (we're using an 8th-order Runge Kutta)
@@ -396,12 +401,12 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
 	if(kozai->get_1PNcross_naoz() == true){
 		// dGdt Naoz 2013b ez. C8
 		double dG1dtintnaoz = (9*a1*m1*m2*m3*s2g1*sincsq*pow(a2,-3)*pow(c,-2)*pow(e1n,2)*pow(G,2)*pow(j2n,-3)*pow(m,-2)*(m1*m2 + pow(m1,2) + pow(m2,2)))/16.;
-		cout << t / YEAR << " " << dG1dtintnaoz << " ";
+
 		// de1dt Naoz 2013b eq. C7 (typo)
 		double de1dtintnaoz = (-9*e1n*j1n*m3*s2g1*sincsq*pow(a1,0.5)*pow(a2,-3)*pow(c,-2)*pow(G,1.5)*pow(j2n,-3)*pow(m,-1.5)*(m1*m2 + pow(m1,2) + pow(m2,2)))/16.;
 		de1dt += de1dtintnaoz * u1;
 		dj1dt += (-e1n / j1n) * de1dtintnaoz * n1;
-		cout << de1dtintnaoz << " ";
+
 		// de2dt Naoz 2013b text between eq. C8 and C9, also Naoz 2013a eq. A33 
 		// double de2dtintnaoz = 0;
 		// de2dt += de2dtintnaoz * u2;
@@ -411,30 +416,30 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
 		double di1dtintnaoz = -(cscinc1*dG1dtintnaoz*(-cinc1 + cscinc*sinc2)*pow(G1,-1));
 		de1dt += ((e1n*sg1)*n1) * di1dtintnaoz;
 		dj1dt += ((-j1n*sg1)*u1 + (-j1n*cg1)*v1) * di1dtintnaoz;
-		cout << di1dtintnaoz << " " ;
+
 		// di2dt Naoz 2013b eq. C12
 		double di2dtoctnaoz = cscinc*dG1dtintnaoz*pow(G2,-1);
 		de2dt += ((e2n*sg2)*n2) * di2dtoctnaoz;
 		dj2dt += ((-j2n*sg2)*u2 + (-j2n*cg2)*v2) * di2dtoctnaoz;
-		cout << di2dtoctnaoz << " ";
+
 		// dh1dt  Naoz 2013b eq. B8
 		double dh1dtintnaoz = -(cscinc1*m3*pow(a2,-3)*pow(c,-2)*pow(G,1.5)*pow(j1n,-2)*pow(j2n,-3)*pow(m,-1.5)*pow(mtot,-0.5)*(16*j2n*(4*m1 + 4*m2 + 3*m3)*sinc*pow(a2,0.5)*(-1 + pow(e1n,2))*pow(m,1.5) + 3*j1n*s2inc*pow(a1,0.5)*(3*m1*m2*(-2 + pow(e1n,2)) + (2 - 5*pow(e1n,2))*pow(m1,2) + (2 - 5*pow(e1n,2))*pow(m2,2) + 3*c2g1*pow(e1n,2)*(m1*m2 + pow(m1,2) + pow(m2,2)))*pow(mtot,0.5)))/32.;
 		de1dt += ((e1n*cinc1)*v1 + (-e1n*cg1*sinc1)*n1) * dh1dtintnaoz;
 		dj1dt += ((j1n*cg1*sinc1)*u1 + (-j1n*sg1*sinc1)*v1) * dh1dtintnaoz;
 		de2dt += ((e2n*cinc2)*v2 + (-e2n*cg2*sinc2)*n2) * dh1dtintnaoz;
 		dj2dt += ((j2n*cg2*sinc2)*u2 + (-j2n*sg2*sinc2)*v2) * dh1dtintnaoz;
-		cout << dh1dtintnaoz << " ";
+
 		// dg1dt  Naoz 2013b eq. C1 (typo)
 		double dg1dtintnaoz = (pow(a2,-3)*pow(c,-2)*pow(G,2)*pow(j2n,-4)*pow(m,-3)*(m1*m2*(-8*j1n*j2n*(4*m + 3*m3)*pow(a1,0.5)*pow(G,-0.5)*pow(m,1.5) + 3*a1*cinc*pow(a2,-0.5)*pow(G,-0.5)*(-3*m1*m2*(1 + pow(j1n,2)) + (2 - 5*pow(e1n,2))*pow(m1,2) + (2 - 5*pow(e1n,2))*pow(m2,2) + 3*c2g1*pow(e1n,2)*(m1*m2 + pow(m1,2) + pow(m2,2)))*pow(mtot,0.5)) + j2n*m3*pow(a1,0.5)*pow(G,-0.5)*pow(j1n,-1)*pow(m,1.5)*(pow(j1n,2)*(-3*m1*m2 + 5*pow(m1,2) + 5*pow(m2,2)) - 9*(m1*m2 + pow(m1,2) + pow(m2,2))*(c2g1*pow(j1n,2) + 2*cincsq*pow(sg1,2)))))/16.;
 		de1dt += ((e1n)*v1) * dg1dtintnaoz;
 		dj1dt += 0.;
-		cout << dg1dtintnaoz << " ";
+
 
 		// dg2dt  Naoz 2013b eq. C2 (typo)
 		double dg2dtintnaoz = (pow(a2,-3.5)*pow(c,-2)*pow(G,1.5)*pow(j2n,-4)*pow(m,-3)*pow(mtot,-0.5)*(m1*m2*(-3*a1*mtot*(6*m1*m2 - 3*m1*m2*pow(e1n,2) - 2*pow(m1,2) + 5*pow(e1n,2)*pow(m1,2) - 2*pow(m2,2) + 5*pow(e1n,2)*pow(m2,2) + 18*c2g1*sincsq*pow(e1n,2)*(m1*m2 + pow(m1,2) + pow(m2,2)) + 3*c2inc*(3*m1*m2*(1 + pow(j1n,2)) + (-2 + 5*pow(e1n,2))*pow(m1,2) + (-2 + 5*pow(e1n,2))*pow(m2,2))) - 64*cinc*j1n*j2n*(4*m1 + 4*m2 + 3*m3)*pow(a1,0.5)*pow(a2,0.5)*pow(m,1.5)*pow(mtot,0.5)) - 4*pow(a1,-0.5)*pow(G,-0.5)*pow(j1n,-1)*pow(m,-0.5)*(-3*a1*cinc*(-3*m1*m2*(1 + pow(j1n,2)) + (2 - 5*pow(e1n,2))*pow(m1,2) + (2 - 5*pow(e1n,2))*pow(m2,2) + 3*c2g1*pow(e1n,2)*(m1*m2 + pow(m1,2) + pow(m2,2))) + 8*j1n*j2n*(4*m1 + 4*m2 + 3*m3)*pow(a1,0.5)*pow(a2,0.5)*pow(m,1.5)*pow(mtot,-0.5))*(cinc*j1n*m1*m2*mtot*pow(a1,0.5)*pow(G,0.5)*pow(m,0.5) + j2n*m3*pow(a2,0.5)*pow(G,0.5)*pow(m,2)*pow(mtot,0.5))))/64.;
 		de2dt += ((e2n)*v2) * dg2dtintnaoz;
 		dj2dt += 0.;
-		cout << dg2dtintnaoz << endl;
+
 	}
 
 	if(kozai->get_1PNcross_will() == true){
@@ -569,6 +574,25 @@ void set_parameters(int argc, char **argv, kozai_struct *kozai, double &t_end, d
 		{"omega1",1,  0, 'l'},
 		{"omega2",1,  0, 'L'},
 		{"inc"   ,1,  0, 'i'},
+		{"coordini", 0, 0, 'N'},
+		{"r1x"   ,1,  0, 'f'},
+		{"r2x"   ,1,  0, 'F'},
+		{"r3x"   ,1,  0, 'j'},
+		{"r1y"   ,1,  0, 'J'},
+		{"r2y"   ,1,  0, 'k'},
+		{"r3y"   ,1,  0, 'K'},
+		{"r1z"   ,1,  0, 'Q'},
+		{"r2z"   ,1,  0, 'R'},
+		{"r3z"   ,1,  0, 'H'},
+		{"v1x"   ,1,  0, 'P'},
+		{"v2x"   ,1,  0, 'v'},
+		{"v3x"   ,1,  0, 'V'},
+		{"v1y"   ,1,  0, 'w'},
+		{"v2y"   ,1,  0, 'W'},
+		{"v3y"   ,1,  0, 'x'},
+		{"v1z"   ,1,  0, 'X'},
+		{"v2z"   ,1,  0, 'y'},
+		{"v3z"   ,1,  0, 'Y'},
 		{"rad1"   ,1,  0, 'b'},
 		{"rad2"   ,1,  0, 'B'},
 		{"chi1"   ,1,  0, 'c'},
@@ -594,7 +618,7 @@ void set_parameters(int argc, char **argv, kozai_struct *kozai, double &t_end, d
 	};
 
 	while ((c = getopt_long (argc, argv, 
-					"m:M:n:a:A:e:E:g:G:l:L:i:b:B:c:C:t:T:u:U:qoOzZpsSrId:D:h",
+					"m:M:n:a:A:e:E:g:G:l:L:i:Nf:F:j:J:k:K:Q:R:H:P:v:V:w:W:x:X:y:Y:b:B:c:C:t:T:u:U:qoOzZpsSrId:D:h",
 					longopts,&option_index)) != -1)
 	switch (c)
     {
@@ -604,6 +628,9 @@ void set_parameters(int argc, char **argv, kozai_struct *kozai, double &t_end, d
 		  kozai->set_m2(atof(optarg)*MSUN); break;
 		case 'n':
 		  kozai->set_m3(atof(optarg)*MSUN); break;
+
+
+		// Options used when specifying elements
 		case 'a':
 		  kozai->set_a1(atof(optarg)*AU); break;
 		case 'A':
@@ -622,6 +649,48 @@ void set_parameters(int argc, char **argv, kozai_struct *kozai, double &t_end, d
 		  kozai->set_Omega2(atof(optarg)*DEG); break;
 		case 'i':
 		  kozai->set_inc(atof(optarg)*DEG); break;
+
+		// Options used when specifying positions and velocities
+  		case 'N':
+		  kozai->set_coordini(true); break;
+		case 'f':
+		  kozai->set_r1x(atof(optarg)*AU); break;
+		case 'F':
+		  kozai->set_r2x(atof(optarg)*AU); break;
+		case 'j':
+		  kozai->set_r3x(atof(optarg)*AU); break;
+		case 'J':
+		  kozai->set_r1y(atof(optarg)*AU); break;
+		case 'k':
+		  kozai->set_r2y(atof(optarg)*AU); break;
+		case 'K':
+		  kozai->set_r3y(atof(optarg)*AU); break;
+		case 'Q':
+		  kozai->set_r1z(atof(optarg)*AU); break;
+		case 'R':
+		  kozai->set_r2z(atof(optarg)*AU); break;
+		case 'H':
+		  kozai->set_r3z(atof(optarg)*AU); break;
+		case 'P':
+		  kozai->set_v1x(atof(optarg)*KM); break;
+		case 'v':
+		  kozai->set_v2x(atof(optarg)*KM); break;
+		case 'V':
+		  kozai->set_v3x(atof(optarg)*KM); break;
+		case 'w':
+		  kozai->set_v1y(atof(optarg)*KM); break;
+		case 'W':
+		  kozai->set_v2y(atof(optarg)*KM); break;
+		case 'x':
+		  kozai->set_v3y(atof(optarg)*KM); break;
+		case 'X':
+		  kozai->set_v1z(atof(optarg)*KM); break;
+		case 'y':
+		  kozai->set_v2z(atof(optarg)*KM); break;
+		case 'Y':
+		  kozai->set_v3z(atof(optarg)*KM); break;
+
+		// Options used when specifying   
 		case 'b':
 		  kozai->set_r1(atof(optarg)*RSUN); break;
 		case 'B':

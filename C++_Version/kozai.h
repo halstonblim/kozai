@@ -38,6 +38,7 @@ const double G3c5 = G*G*G / (c*c*c*c*c);
 //Conversion Factors
 const double YEAR=3.15569e7; // s
 const double AU=14959787070000.0; // cm
+const double KM=1.e5; // cm
 const double RSUN=69570000000.0; // cm
 const double MSUN=1.9884754153381438e+33; // g
 const double DEG=0.017453292519943295;
@@ -131,6 +132,17 @@ class kozai_struct
 
 		double *y;
 
+		// triple configuration (initial)
+		// only used if positions and velocities are sepecified
+		// otherwise unused
+		bool coordini;
+		vec rvec1;
+		vec rvec2;
+		vec rvec3;
+		vec vvec1;
+		vec vvec2;
+		vec vvec3;
+
 
 	public:
 
@@ -139,7 +151,7 @@ class kozai_struct
 			  double ig1=199.31831, double ig2=237.15944, double im1=24.22645, double im2=14.999986, double im3=21.509239,
 			  double iOmega1=321.97666, double iOmega2=141.97666, double ir1=0, double ir2=0,  double ichi1=1, double ichi2=1,
 			  double itheta1=0, double itheta2=0, double iphi1=0, double iphi2=0,
-			  bool iquad=false, bool ioct=false, bool ioctel=false, bool icrossnaoz=false, bool icrosswill=false, bool iperi=false, bool iso=false, bool iss=false, bool rad=false)
+			  bool iquad=false, bool ioct=false, bool ioctel=false, bool icrossnaoz=false, bool icrosswill=false, bool iperi=false, bool iso=false, bool iss=false, bool rad=false, bool icoordini=false)
 			{	
 				a1=ia1*AU;
 				a2=ia2*AU;
@@ -171,10 +183,84 @@ class kozai_struct
 				spinspin=iss;
 				radiation=rad;
 				y = new double[DIMENSION];
+
+				// only initialized when positions and velocities are specified
+				coordini = icoordini;
+				rvec1 = vec(0.,0.,0.);
+				rvec2 = vec(0.,0.,0.);
+				rvec3 = vec(0.,0.,0.);
+				vvec1 = vec(0.,0.,0.);
+				vvec2 = vec(0.,0.,0.);
+				vvec3 = vec(0.,0.,0.);
+
 			}
 
 		//destructor
 		~kozai_struct() {delete y;}
+
+		void coord_initialize()
+		{
+			vec zhat = vec(0.,0.,1.);
+
+			// Masses
+			double m = m1+m2;
+			double M = m1+m2+m3;
+			double mu1 = m1*m2/m;
+			double mnu2 = m*m3/M;
+
+			// Inner Orbit
+			vec x = rvec1 - rvec2;
+			vec v = vvec1 - vvec2;
+			vec h1 = x^v; //specific angular momentum
+			vec L1vec = mu1*h1; //total angular momentum
+			vec h1hat = h1 / abs(h1);
+			double r1 = abs(x);
+			vec r1hat = x / r1;
+			a1 = pow((2./r1) - (sqr(v)/(G*m)),-1.);
+			vec A1 =mu1*(v^L1vec) - (G*m*sqr(mu1))*r1hat;
+			e1_init = A1 / (G*m*sqr(mu1));
+			double e1n = abs(e1_init);
+			double j1n = sqrt(1.-sqr(e1n));
+			j1_init = j1n*(h1hat);
+
+			// Outer orbit
+			vec x0 = (m1*rvec1 + m2*rvec2) / m;
+			vec X = rvec3 - x0;
+			vec V = (M/m)*vvec3;
+			vec h2 = X^V;
+			vec L2vec = mu2*h2;
+			vec h2hat = h2 / abs(h2);
+			double r2 = abs(X);
+			vec r2hat = X / r2;
+			a2 = pow((2./r2) - (sqr(V)/(G*M)),-1.);
+			// Construct Runga Lenz Vector
+			vec A2 =mu2*(V^L2vec) - (G*M*sqr(mu2))*r2hat;
+			e2_init = A2 / (G*M*sqr(mu2));
+			double e2n = abs(e2_init);
+			double j2n = sqrt(1.-sqr(e2n));
+			j2_init = j2n*(h2hat);
+
+			// Fill the vector to calculate orbital elements
+			for(int i=0; i<3; i++){
+				y[i] = j1_init[i];
+				y[i+3] = e1_init[i];
+				y[i+6] = j2_init[i];
+				y[i+9] = e2_init[i];
+				y[i+12] = 0; //initialize later
+				y[i+15] = 0; //initialize later
+			}
+			y[18] = a1;
+
+			inc = get_inc();
+			e1 = e1n;
+			e2 = e2n;
+			g1 = get_g1();
+			g2 = get_g2();
+			Omega1 = get_Omega1();
+			Omega2 = get_Omega2();
+
+		}
+
 
 		void initialize()
 		{
@@ -330,6 +416,42 @@ class kozai_struct
 		double get_inc2(){
 			return acos(this->get_j2()[2] / abs(this->get_j2()));
 		}
+
+		// configuration using positions and velocities
+		void set_coordini(bool tempval) {coordini=tempval;}
+		bool get_coordini() {return coordini;}
+
+		void set_r1x(double tempval) {rvec1[0]=tempval;}
+		void set_r1y(double tempval) {rvec1[1]=tempval;}
+		void set_r1z(double tempval) {rvec1[2]=tempval;}
+		
+		void set_r2x(double tempval) {rvec2[0]=tempval;}
+		void set_r2y(double tempval) {rvec2[1]=tempval;}
+		void set_r2z(double tempval) {rvec2[2]=tempval;}
+		
+		void set_r3x(double tempval) {rvec3[0]=tempval;}
+		void set_r3y(double tempval) {rvec3[1]=tempval;}
+		void set_r3z(double tempval) {rvec3[2]=tempval;}
+		
+		void set_v1x(double tempval) {vvec1[0]=tempval;}
+		void set_v1y(double tempval) {vvec1[1]=tempval;}
+		void set_v1z(double tempval) {vvec1[2]=tempval;}
+		
+		void set_v2x(double tempval) {vvec2[0]=tempval;}
+		void set_v2y(double tempval) {vvec2[1]=tempval;}
+		void set_v2z(double tempval) {vvec2[2]=tempval;}
+
+		void set_v3x(double tempval) {vvec3[0]=tempval;}
+		void set_v3y(double tempval) {vvec3[1]=tempval;}
+		void set_v3z(double tempval) {vvec3[2]=tempval;}
+
+		vec get_rvec1() {return rvec1;}
+		vec get_rvec2() {return rvec2;}
+		vec get_rvec3() {return rvec3;}
+
+		vec get_vvec1() {return vvec1;}
+		vec get_vvec2() {return vvec2;}
+		vec get_vvec3() {return vvec3;}
 
 		//Physical Properties of Inner Binary (including spins)
 		void set_r1(double r1_i) {r1=r1_i*RSUN;}
