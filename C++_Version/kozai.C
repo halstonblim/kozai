@@ -1,6 +1,6 @@
 #include "kozai.h"
 
-const string help="\nCarl's Kozai Code\n\n\
+const string help=  "\nCarl's Kozai Code\n\n\
 For integrating the secular equations of motions\n\
 for the three-body problem, including the quadrupole\n\
 and octupole terms (see Tremaine+2009 and Liu+2015)\n\n\
@@ -15,8 +15,8 @@ Options:\n\
 Parameters:\n\
   --m1      mass 1 of inner binary (MSUN)\n\
   --m2      mass 2 of inner binary (MSUN)\n\
-  --m3      mass of tertiary (MSUN)\n\
-Orbital Element Initial Conditions:  
+  --m3      mass of tertiary (MSUN)\n\n\
+Orbital Element Initial Conditions:\n\
   --a1      Semi-major axis of inner binary (AU)\n\
   --a2      Semi-major axis of outer binary (AU)\n\
   --e1      Eccentricity of inner binary\n\
@@ -25,8 +25,8 @@ Orbital Element Initial Conditions:
   --g2      Argument of pericenter for outer binary (deg)\n\
   --omega1  Longitude of ascending node for inner binary (deg)\n\
   --omega2  Longitude of ascending node for outer binary (deg)\n\
-  --inc     Mutual Inclination (deg)\n\
-Coordinate Initial Conditions
+  --inc     Mutual Inclination (deg)\n\n\
+Coordinate Initial Conditions\n\
   --coordini Use coordinate initial conditions. Overwrites element initial conditions\n\
   --r1x      x-coordinate of body 1 (AU) \n\
   --r1y      y-coordinate of body 1 (AU) \n\
@@ -45,8 +45,8 @@ Coordinate Initial Conditions
   --v2z      z-velocity of body 2 (AU) \n\
   --v3x      x-velocity of body 3 (AU) \n\
   --v3y      y-velocity of body 3 (AU) \n\
-  --r3z      z-velocity of body 3 (AU) \n\
-Other Parameters:
+  --r3z      z-velocity of body 3 (AU) \n\n\
+Other Parameters:\n\
   --rad1   Radius of mass 1 (RSUN)\n\
   --rad2    Radius of mass 2 (RSUN)\n\
   --chi1    Dimmensionless Spin of mass 1 (0-1)\n\
@@ -63,16 +63,16 @@ Other Parameters:
 Flags:\n\
   --quad       Include quadrupole terms \n\
   --oct        Include octupole Terms\n\
-  --oct_elements        Include octupole Terms (implemented using elements) \n\
-  --cross_naoz        Include cross Terms (implemented Naoz 2013b equations) \n\
-  --cross_will        Include cross Terms (implemented Will 2014 equations) \n\
+  --oct_elements        Include octupole Terms (implemented using elements)\n\
+  --cross_naoz        Include cross Terms (implemented Naoz 2013b equations)\n\
+  --cross_lim        Include cross Terms (Lim 2019)\n\
   --peri       Include pericenter precession (1pN) terms\n\
   --spinorbit  Include spin-orbit (1.5pN) terms\n\
   --spinspin   Include spin-spin (2pN) terms\n\
   --rad        Include gravitational-wave emission (2.5pN)\n\
   --ignore_gsl Ignore errors from GSL (i.e. when a binary merges, the inner\n\
                binary can decouple from the outer s.t. the optimal timestep\n\
-               for the inner is beyond machine-tolerance away from the outer)\n";
+               for the inner is beyond machine-tolerance away from the outer) \n";
 
 // Function for printing the state of a triple; placed here for easy
 // modification
@@ -463,7 +463,7 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
 		dj2dt += 0.;
 
 	}
-
+/*
 	if(kozai->get_1PNcross_will() == true){
 		// Warning: Equations derived apply only for fixed circular outer orbit. May not be stricly valid 
 		//  - Only orbital elements e1, inc1, h1 change at leading order
@@ -494,6 +494,43 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
 
 		// da1dt  Will (89:044043, 2014) eq. 4.14a
 		dadt += (-15*m3*s2g1*sincsq*pow(a1,1.5)*pow(a2,-3)*pow(c,-2)*pow(G,1.5)*((6*(1 - e1n)*pow(1 + e1n,-1))/5. + e1n*(7 + 3*e1n - (3 + 4*e1n)*eta)*pow(1 - e1n,-1)*pow(1 + e1n,2)*pow(j1n,-3))*pow(m,0.5))/4.;
+	}
+*/
+	if(kozai->get_1PNcross_lim() == true){
+		// Warning: Equations derived apply only for mtot >> m
+
+		// f(e,eta), g(e,eta) Will (89:044043, 2014) eq. 4.15
+		double eta = m1*m2 / sqr(m);
+		double p1 = a1 * sqr(j1n);
+		double p2 = a2 * sqr(j2n);
+		double inc = kozai->get_inc();
+		double inc1 = kozai->get_inc1();
+
+		// de1dt
+		double de1dtintlim = (3*mtot*s2g1*sincsq*pow(c,-2)*pow(e1n,-3)*(24*(-1 + eta)*(-1 + j1n) - 12*(-1 + eta)*(-4 + 3*j1n)*pow(e1n,2) + (-24*(-1 + eta) + (-23 + 12*eta)*j1n)*pow(e1n,4))*pow(G,1.5)*pow(j1n,-1)*pow(j2n,3)*pow(m,0.5)*pow(p1,0.5)*pow(p2,-3))/8.;
+		de1dt += de1dtintlim * u1;
+		dj1dt += (-e1n / j1n) * de1dtintlim * n1;
+
+		// di1dt
+		double di1dtintlim = (-33*cg1*cinc*mtot*sg1*sinc*pow(c,-2)*pow(G,1.5)*pow(j1n,-2)*(-1 + pow(j1n,2))*pow(j2n,3)*pow(m,0.5)*pow(p1,0.5)*pow(p2,-3))/4.;
+		de1dt += ((e1n*sg1)*n1) * di1dtintlim;
+		dj1dt += ((-j1n*sg1)*u1 + (-j1n*cg1)*v1) * di1dtintlim;
+
+		// dh1dt 
+		double dh1dtintlim = (-3*cscinc1*mtot*s2inc*pow(c,-2)*(-6 - 4*eta + 11*c2g1*pow(e1n,2) + (-5 + 4*eta)*pow(e1n,2))*pow(G,1.5)*pow(j1n,-2)*pow(j2n,3)*pow(m,0.5)*pow(p1,0.5)*pow(p2,-3))/16. + (3*cscinc1*sinc*pow(c,-2)*pow(G,1.5)*pow(j2n,3)*pow(mtot,1.5)*pow(p2,-2.5))/2.;
+		de1dt += ((e1n*cinc1)*v1 + (-e1n*cg1*sinc1)*n1) * dh1dtintlim;
+		dj1dt += ((j1n*cg1*sinc1)*u1 + (-j1n*sg1*sinc1)*v1) * dh1dtintlim;
+
+		// dg1dt
+		double dg1dtintlim = -(mtot*pow(c,-2)*pow(G,1.5)*pow(j1n,-2)*pow(1 + j1n,-2)*pow(j2n,3)*pow(m,0.5)*pow(p1,0.5)*pow(p2,-3)*(6*c2g1*sincsq*pow(j1n,2)*(17 - 6*eta + (34 - 12*eta)*j1n + (5 + 6*eta)*pow(j1n,2)) - 3*c2inc*(-11 + 10*eta)*pow(j1n,2)*pow(1 + j1n,2) + 3*cotinc1*s2inc*(11 + 11*c2g1*(-1 + pow(j1n,2)) - 5*pow(j1n,2) + 4*eta*pow(j1n,2))*pow(1 + j1n,2) - (-11 + 10*eta)*pow(j1n + pow(j1n,2),2)))/16. - (3*cscinc1*pow(c,-2)*pow(G,1.5)*pow(j2n,3)*pow(mtot,1.5)*pow(p2,-2.5)*sin(inc - inc1))/2.;
+		de1dt += ((e1n)*v1) * dg1dtintlim;
+		dj1dt += 0.;
+
+		// dadt from a = p1 / (1 - sqr(e1n)) 
+		double dp1dtintlim = (-33*mtot*s2g1*sincsq*pow(c,-2)*pow(G,1.5)*pow(j1n,-2)*(-1 + pow(j1n,2))*pow(j2n,3)*pow(m,0.5)*pow(p1,1.5)*pow(p2,-3))/4.;
+		dadt += (dp1dtintlim + 2. * a1 * e1n * de1dtintlim) / sqr(j1n);
+		
+
 	}
 
 	//Add the pericenter precession of the inner binary
@@ -627,7 +664,7 @@ void set_parameters(int argc, char **argv, kozai_struct *kozai, double &t_end, d
 		{"oct"   ,0,  0, 'o'},
 		{"oct_elements"   ,0,  0, 'O'},
 		{"cross_naoz"   ,0,  0, 'z'},
-		{"cross_will"   ,0,  0, 'Z'},
+		{"cross_lim"   ,0,  0, 'Z'},
 		{"peri"  ,0,  0, 'p'},
 		{"spinorbit"  ,0,  0, 's'},
 		{"spinspin"   ,0,  0, 'S'},
@@ -738,7 +775,7 @@ void set_parameters(int argc, char **argv, kozai_struct *kozai, double &t_end, d
 		case 'z':
 		  kozai->set_1PNcross_naoz(true); break;
 		case 'Z':
-		  kozai->set_1PNcross_will(true); break;
+		  kozai->set_1PNcross_lim(true); break;
 		case 'p':
 		  kozai->set_pericenter(true); break;
 		case 's':

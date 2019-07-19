@@ -115,7 +115,7 @@ class kozai_struct
 		bool octupole;
 		bool octupoleelements;
 		bool crossnaoz;
-		bool crosswill;
+		bool crosslim;
 		bool pericenter;
 		bool spinorbit;
 		bool spinspin;
@@ -151,7 +151,7 @@ class kozai_struct
 			  double ig1=199.31831, double ig2=237.15944, double im1=24.22645, double im2=14.999986, double im3=21.509239,
 			  double iOmega1=321.97666, double iOmega2=141.97666, double ir1=0, double ir2=0,  double ichi1=1, double ichi2=1,
 			  double itheta1=0, double itheta2=0, double iphi1=0, double iphi2=0,
-			  bool iquad=false, bool ioct=false, bool ioctel=false, bool icrossnaoz=false, bool icrosswill=false, bool iperi=false, bool iso=false, bool iss=false, bool rad=false, bool icoordini=false)
+			  bool iquad=false, bool ioct=false, bool ioctel=false, bool icrossnaoz=false, bool icrosslim=false, bool iperi=false, bool iso=false, bool iss=false, bool rad=false, bool icoordini=false)
 			{	
 				a1=ia1*AU;
 				a2=ia2*AU;
@@ -177,7 +177,7 @@ class kozai_struct
 				octupole=ioct;
 				octupoleelements=ioctel;
 				crossnaoz=icrossnaoz;
-				crosswill=icrosswill;
+				crosslim=icrosslim;
 				pericenter=iperi;
 				spinorbit=iso;
 				spinspin=iss;
@@ -549,8 +549,8 @@ class kozai_struct
 		void set_1PNcross_naoz(bool crossnaoz_i) {crossnaoz=crossnaoz_i;}
 		bool get_1PNcross_naoz() {return crossnaoz;}
 
-		void set_1PNcross_will(bool crosswill_i) {crosswill=crosswill_i;}
-		bool get_1PNcross_will() {return crosswill;}
+		void set_1PNcross_lim(bool crosslim_i) {crosslim=crosslim_i;}
+		bool get_1PNcross_lim() {return crosslim;}
 
 		void set_pericenter(bool pericenter_i) {pericenter=pericenter_i;}
 		bool get_pericenter() {return pericenter;}
