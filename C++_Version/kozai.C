@@ -26,28 +26,8 @@ Orbital Element Initial Conditions:\n\
   --omega1  Longitude of ascending node for inner binary (deg)\n\
   --omega2  Longitude of ascending node for outer binary (deg)\n\
   --inc     Mutual Inclination (deg)\n\n\
-Coordinate Initial Conditions\n\
-  --coordini Use coordinate initial conditions. Overwrites element initial conditions\n\
-  --r1x      x-coordinate of body 1 (AU) \n\
-  --r1y      y-coordinate of body 1 (AU) \n\
-  --r1z      z-coordinate of body 1 (AU) \n\
-  --r2x      x-coordinate of body 2 (AU) \n\
-  --r2y      y-coordinate of body 2 (AU) \n\
-  --r2z      z-coordinate of body 2 (AU) \n\
-  --r3x      x-coordinate of body 3 (AU) \n\
-  --r3y      y-coordinate of body 3 (AU) \n\
-  --r3z      z-coordinate of body 3 (AU) \n\
-  --v1x      x-velocity of body 1 (AU) \n\
-  --v1y      y-velocity of body 1 (AU) \n\
-  --v1z      z-velocity of body 1 (AU) \n\
-  --v2x      x-velocity of body 2 (AU) \n\
-  --v2y      y-velocity of body 2 (AU) \n\
-  --v2z      z-velocity of body 2 (AU) \n\
-  --v3x      x-velocity of body 3 (AU) \n\
-  --v3y      y-velocity of body 3 (AU) \n\
-  --r3z      z-velocity of body 3 (AU) \n\n\
 Other Parameters:\n\
-  --rad1   Radius of mass 1 (RSUN)\n\
+  --rad1    Radius of mass 1 (RSUN)\n\
   --rad2    Radius of mass 2 (RSUN)\n\
   --chi1    Dimmensionless Spin of mass 1 (0-1)\n\
   --chi2    Dimmensionless Spin of mass 2 (0-1)\n\
@@ -61,18 +41,18 @@ Other Parameters:\n\
                 Negative dt outputs every 10^{-dt} adaptive timesteps\n\
                     (e.g. dt=-2 outputs every 100 timesteps)\n\n\
 Flags:\n\
-  --quad       Include quadrupole terms \n\
-  --oct        Include octupole Terms\n\
+  --quad       			Include quadrupole terms \n\
+  --oct                 Include octupole Terms\n\
   --oct_elements        Include octupole Terms (implemented using elements)\n\
-  --cross_naoz        Include cross Terms (implemented Naoz 2013b equations)\n\
-  --cross_lim        Include cross Terms (Lim 2019)\n\
-  --peri       Include pericenter precession (1pN) terms\n\
-  --spinorbit  Include spin-orbit (1.5pN) terms\n\
-  --spinspin   Include spin-spin (2pN) terms\n\
-  --rad        Include gravitational-wave emission (2.5pN)\n\
-  --ignore_gsl Ignore errors from GSL (i.e. when a binary merges, the inner\n\
-               binary can decouple from the outer s.t. the optimal timestep\n\
-               for the inner is beyond machine-tolerance away from the outer) \n";
+  --cross_naoz        	Include cross Terms (implemented using Naoz 2013b equations)\n\
+  --cross_lim         	Include cross Terms (implemented using Lim 2019 equations)\n\
+  --peri       			Include pericenter precession (1pN) terms\n\
+  --spinorbit  			Include spin-orbit (1.5pN) terms\n\
+  --spinspin   			Include spin-spin (2pN) terms\n\
+  --rad        			Include gravitational-wave emission (2.5pN)\n\
+  --ignore_gsl 			Ignore errors from GSL (i.e. when a binary merges, the inner\n\
+               				binary can decouple from the outer s.t. the optimal timestep\n\
+               				for the inner is beyond machine-tolerance away from the outer) \n";
 
 // Function for printing the state of a triple; placed here for easy
 // modification
@@ -117,10 +97,6 @@ int main(int argc, char **argv){
 	//First, initialize the Kozai structure
 	kozai_struct *kozai = new kozai_struct;
 	set_parameters(argc, argv, kozai, tmax, delta_t, IGNORE_GSL_ERRORS);
-
-	if (kozai->get_coordini() == true) {
-		kozai->coord_initialize();
-	}
 	
 	kozai->initialize();
 
@@ -278,7 +254,7 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
 
 	//extract semi-major axes, masses and angular momenta
 	double a1 = y[18];
-	double a2 = kozai->get_a2();
+	double a2 = y[19];
 	double m1 = kozai->get_m1();
 	double m2 = kozai->get_m2();
 	double m3 = kozai->get_m3();
@@ -332,7 +308,9 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
 	double sg1 = (n2*u1) / sinc;
 	double s2g1 = 2.*sg1*cg1;
 	double sinc2 = sinc * G1 / Gtot;
+	double cscinc2 = 1. / sinc2;
 	double cinc2 = sqrt(1.-sqr(sinc2));
+	double cotinc2 = cinc2 / sinc2;
 	double cg2 = (n1*v2) / sinc;
 	double c2g2 = 2.*sqr(cg2) - 1.;
 	double sg2 = (n1*u2) / sinc;
@@ -347,6 +325,7 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
 
 	vec dj1dt, de1dt=0., dj2dt, de2dt=0., ds1dt, ds2dt;
 	double dadt  = 0;
+	double da2dt = 0;
 
 	//Add the quadrupole-order secular evolution equations
 	if(kozai->get_quadrupole()){
@@ -463,41 +442,9 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
 		dj2dt += 0.;
 
 	}
-/*
-	if(kozai->get_1PNcross_will() == true){
-		// Warning: Equations derived apply only for fixed circular outer orbit. May not be stricly valid 
-		//  - Only orbital elements e1, inc1, h1 change at leading order
-		//  - Will says g1 precesion dominated by 1PN pericenter precession (not important at leading order)
-		//  - Naoz says h2 to change at same rate as h1, to conserve angular momentum. Apply that here
 
-		// f(e,eta), g(e,eta) Will (89:044043, 2014) eq. 4.15
-		double eta = m1*m2 / sqr(m);
-		double feta = (pow(e1n,-3)*(8 - 16*e1n - 24*pow(e1n,2) + 109*pow(e1n,3) - eta*pow(e1n,3)*(15 + 47*e1n + 76*pow(e1n,2) + 37*pow(e1n,3)) + 114*pow(e1n,4) + 43*pow(e1n,5) + 16*pow(e1n,6))*pow(1 + e1n,-1))/5.;
-		double geta = 2*(2 + 3*e1n)*(12 + 12*e1n + 11*pow(e1n,2)) - eta*(24 + 40*e1n + 84*pow(e1n,2) + 86*pow(e1n,3) + 11*pow(e1n,4));
-
-		// de1dt Will (91:029902E, 2015) 
-		double de1dtintwill = (-15*m3*s2g1*sincsq*pow(a1,0.5)*pow(a2,-3)*pow(c,-2)*pow(G,1.5)*((4*pow(1 - e1n,2)*pow(e1n,-3)*(2 + 4*e1n - 3*pow(e1n,2)))/5. + (3 + 7*e1n - (1 + 6*e1n)*eta - feta)*pow(1 - e1n,-1)*pow(1 + e1n,2)*pow(j1n,-1))*pow(m,0.5))/16.;
-		de1dt += de1dtintwill * u1;
-		dj1dt += (-e1n / j1n) * de1dtintwill * n1;
-
-		// di1dt Will (91:029902E, 2015) 
-		double di1dtintwill =(-15*cinc*m3*s2g1*sinc*pow(a1,0.5)*pow(a2,-3)*pow(c,-2)*pow(G,1.5)*(e1n*(3 + 7*e1n - (1 + 6*e1n)*eta + feta)*pow(1 - e1n,-1)*pow(1 + e1n,2)*pow(j1n,-3) - (8*(1 + 3*e1n)*pow(1 - e1n,3)*pow(e1n,-2)*pow(j1n,-2))/5.)*pow(m,0.5))/16.;
-		de1dt += ((e1n*sg1)*n1) * di1dtintwill;
-		dj1dt += ((-j1n*sg1)*u1 + (-j1n*cg1)*v1) * di1dtintwill;
-
-		// dh1dt  Will (89:044043, 2014) eq. 4.14d
-		double dh1dtintwill = (m3*pow(a1,-2.5)*pow(c,-2)*pow(G,1.5)*pow(m,0.5)*(64*Pi*pow(a1,2.5)*pow(a2,-2.5) - 6*cinc*geta*Pi*pow(a1,3)*pow(a2,-3)*pow(-1 + e1n,-2)*pow(j1n,-1) + 15*c2g1*cinc*pow(a1,1.5)*pow(a2,-3)*pow(G,0.5)*((-8*(1 + 3*e1n)*pow(-1 + e1n,2)*pow(e1n,-2)*pow(1 + e1n,-1))/5. - e1n*(1 + e1n)*(-3 + eta + e1n*(-7 + 6*eta) - feta)*pow(-1 + e1n,-2)*pow(j1n,-1))*pow(m,0.5))*pow(Pi,-1))/32.;
-		de1dt += ((e1n*cinc1)*v1 + (-e1n*cg1*sinc1)*n1) * dh1dtintwill;
-		dj1dt += ((j1n*cg1*sinc1)*u1 + (-j1n*sg1*sinc1)*v1) * dh1dtintwill;
-		de2dt += ((e2n*cinc2)*v2 + (-e2n*cg2*sinc2)*n2) * dh1dtintwill;
-		dj2dt += ((j2n*cg2*sinc2)*u2 + (-j2n*sg2*sinc2)*v2) * dh1dtintwill;
-
-		// da1dt  Will (89:044043, 2014) eq. 4.14a
-		dadt += (-15*m3*s2g1*sincsq*pow(a1,1.5)*pow(a2,-3)*pow(c,-2)*pow(G,1.5)*((6*(1 - e1n)*pow(1 + e1n,-1))/5. + e1n*(7 + 3*e1n - (3 + 4*e1n)*eta)*pow(1 - e1n,-1)*pow(1 + e1n,2)*pow(j1n,-3))*pow(m,0.5))/4.;
-	}
-*/
 	if(kozai->get_1PNcross_lim() == true){
-		// Warning: Equations derived apply only for mtot >> m
+		// Equations only apply for m3 >> m1, m2
 
 		// f(e,eta), g(e,eta) Will (89:044043, 2014) eq. 4.15
 		double eta = m1*m2 / sqr(m);
@@ -506,36 +453,62 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
 		double inc = kozai->get_inc();
 		double inc1 = kozai->get_inc1();
 
-		// de1dt
-		double de1dtintlim = (3*mtot*s2g1*sincsq*pow(c,-2)*pow(e1n,-3)*(24*(-1 + eta)*(-1 + j1n) - 12*(-1 + eta)*(-4 + 3*j1n)*pow(e1n,2) + (-24*(-1 + eta) + (-23 + 12*eta)*j1n)*pow(e1n,4))*pow(G,1.5)*pow(j1n,-1)*pow(j2n,3)*pow(m,0.5)*pow(p1,0.5)*pow(p2,-3))/8.;
+		// // de1dt
+		double de1dtintlim =(-15*(-4*c2g1*cinc*s2g2 + s2g1*(c2g2*(3 + c2inc) + 6*sincsq))*pow(c,-2)*pow(G,1.5)*pow(j1n,-2)*(-1 + pow(j2n,2))*pow(j2n,3)*pow(m,-0.5)*pow(mtot,2)*pow(p1,1.5)*pow(p2,-4)*pow(1 - pow(j1n,2),0.5))/16.;
 		de1dt += de1dtintlim * u1;
 		dj1dt += (-e1n / j1n) * de1dtintlim * n1;
 
-		// di1dt
-		double di1dtintlim = (-33*cg1*cinc*mtot*sg1*sinc*pow(c,-2)*pow(G,1.5)*pow(j1n,-2)*(-1 + pow(j1n,2))*pow(j2n,3)*pow(m,0.5)*pow(p1,0.5)*pow(p2,-3))/4.;
+		// // de2dt
+		double de2dtintlim =(-3*pow(c,-2)*pow(G,1.5)*pow(j1n,-6)*(s2g2*(c2g1*(3 + c2inc)*(49 - 17*pow(j1n,2)) + 10*sincsq*(7 - 3*pow(j1n,2))) + 4*c2g2*cinc*s2g1*(-49 + 17*pow(j1n,2)))*pow(j2n,3)*(120 - 89*pow(j2n,2) + 7*pow(j2n,4))*pow(m,-1)*pow(mtot,2.5)*pow(p1,3)*pow(p2,-5.5)*pow(1 - pow(j2n,2),0.5))/512.;
+		de2dt += de2dtintlim * u2;
+		dj2dt += (-e2n / j2n) * de2dtintlim * n2;
+
+		// // di1dt
+		double di1dtintlim = (3*sinc*pow(c,-2)*pow(G,1.5)*pow(j1n,-4)*(s2g2*(5 - 5*c2g1*(-1 + pow(j1n,2)) - 3*pow(j1n,2)) + 5*(-3 + c2g2)*cinc*s2g1*(-1 + pow(j1n,2)))*(-1 + pow(j2n,2))*pow(j2n,3)*pow(m,-0.5)*pow(mtot,2)*pow(p1,1.5)*pow(p2,-4))/8.;
 		de1dt += ((e1n*sg1)*n1) * di1dtintlim;
 		dj1dt += ((-j1n*sg1)*u1 + (-j1n*cg1)*v1) * di1dtintlim;
 
+		// // // di2dt
+		double di2dtintlim = (-3*eta*sinc*pow(c,-2)*pow(G,1.5)*pow(j1n,-4)*(5*(5 + 2*c2g2)*s2g1*(-1 + pow(j1n,2)) + 2*cinc*s2g2*(-5 - 5*c2g1*(-1 + pow(j1n,2)) + 3*pow(j1n,2)))*(-1 + pow(j2n,2))*pow(j2n,3)*pow(mtot,1.5)*pow(p1,2)*pow(p2,-4.5))/8.;
+		de2dt += ((e2n*sg2)*n2) * di2dtintlim;
+		dj2dt += ((-j2n*sg2)*u2 + (-j2n*cg2)*v2) * di2dtintlim;
+
 		// dh1dt 
-		double dh1dtintlim = (-3*cscinc1*mtot*s2inc*pow(c,-2)*(-6 - 4*eta + 11*c2g1*pow(e1n,2) + (-5 + 4*eta)*pow(e1n,2))*pow(G,1.5)*pow(j1n,-2)*pow(j2n,3)*pow(m,0.5)*pow(p1,0.5)*pow(p2,-3))/16. + (3*cscinc1*sinc*pow(c,-2)*pow(G,1.5)*pow(j2n,3)*pow(mtot,1.5)*pow(p2,-2.5))/2.;
+		double dh1dtintlim = (3*cscinc1*sinc*pow(c,-2)*pow(G,1.5)*pow(j2n,3)*pow(mtot,1.5)*pow(p2,-2.5))/2.;
 		de1dt += ((e1n*cinc1)*v1 + (-e1n*cg1*sinc1)*n1) * dh1dtintlim;
 		dj1dt += ((j1n*cg1*sinc1)*u1 + (-j1n*sg1*sinc1)*v1) * dh1dtintlim;
 
+		// dh2dt 
+		double dh2dtintlim =(-3*cscinc2*eta*sinc*pow(c,-2)*pow(G,1.5)*pow(j1n,-4)*((-5 + 2*c2g2)*cinc*(5 + 5*c2g1*(-1 + pow(j1n,2)) - 3*pow(j1n,2)) + 10*s2g1*s2g2*(-1 + pow(j1n,2)))*(-1 + pow(j2n,2))*pow(j2n,3)*pow(mtot,1.5)*pow(p1,2)*pow(p2,-4.5))/8.;
+		de2dt += ((e2n*cinc2)*v2 + (-e2n*cg2*sinc2)*n2) * dh2dtintlim;
+		dj2dt += ((j2n*cg2*sinc2)*u2 + (-j2n*sg2*sinc2)*v2) * dh2dtintlim;
+
 		// dg1dt
-		double dg1dtintlim = -(mtot*pow(c,-2)*pow(G,1.5)*pow(j1n,-2)*pow(1 + j1n,-2)*pow(j2n,3)*pow(m,0.5)*pow(p1,0.5)*pow(p2,-3)*(6*c2g1*sincsq*pow(j1n,2)*(17 - 6*eta + (34 - 12*eta)*j1n + (5 + 6*eta)*pow(j1n,2)) - 3*c2inc*(-11 + 10*eta)*pow(j1n,2)*pow(1 + j1n,2) + 3*cotinc1*s2inc*(11 + 11*c2g1*(-1 + pow(j1n,2)) - 5*pow(j1n,2) + 4*eta*pow(j1n,2))*pow(1 + j1n,2) - (-11 + 10*eta)*pow(j1n + pow(j1n,2),2)))/16. - (3*cscinc1*pow(c,-2)*pow(G,1.5)*pow(j2n,3)*pow(mtot,1.5)*pow(p2,-2.5)*sin(inc - inc1))/2.;
+		double dg1dtintlim =(-3*cscinc1*sinc2*pow(c,-2)*pow(G,1.5)*pow(j2n,3)*pow(mtot,1.5)*pow(p2,-2.5))/2.;
 		de1dt += ((e1n)*v1) * dg1dtintlim;
 		dj1dt += 0.;
 
+		// // dg2dt
+		double dg2dtintlim =(-3*pow(c,-2)*pow(G,1.5)*pow(j1n,-6)*pow(j2n,3)*(8*cinc*s2g1*s2g2*(-49 + 17*pow(j1n,2))*(-24 + 4*pow(j2n,2) + pow(j2n,4)) + 6*c2g1*(-49 + 17*pow(j1n,2))*(sincsq*(-5 + pow(j2n,2))*pow(j2n,2) + c2g2*(-24 + 4*pow(j2n,2) + pow(j2n,4))) + 5*(-7 + 3*pow(j1n,2))*((-5 + pow(j2n,2))*pow(j2n,2) + 4*c2g2*sincsq*(-24 + 4*pow(j2n,2) + pow(j2n,4))) + c2inc*(15*(-7 + 3*pow(j1n,2))*(-5 + pow(j2n,2))*pow(j2n,2) + 2*c2g1*c2g2*(-49 + 17*pow(j1n,2))*(-24 + 4*pow(j2n,2) + pow(j2n,4))))*pow(m,-1)*pow(mtot,2.5)*pow(p1,3)*pow(p2,-5.5))/512.;
+		de2dt += ((e2n)*v2) * dg2dtintlim;
+		dj2dt += 0.;
+
 		// dadt from a = p1 / (1 - sqr(e1n)) 
-		double dp1dtintlim = (-33*mtot*s2g1*sincsq*pow(c,-2)*pow(G,1.5)*pow(j1n,-2)*(-1 + pow(j1n,2))*pow(j2n,3)*pow(m,0.5)*pow(p1,1.5)*pow(p2,-3))/4.;
+		double dp1dtintlim = (-15*(-4*c2g1*cinc*s2g2 + s2g1*(c2g2*(3 + c2inc) + 6*sincsq))*pow(c,-2)*pow(G,1.5)*pow(j1n,-4)*(-1 + pow(j1n,2))*(-1 + pow(j2n,2))*pow(j2n,3)*pow(m,-0.5)*pow(mtot,2)*pow(p1,2.5)*pow(p2,-4))/8.;
 		dadt += (dp1dtintlim + 2. * a1 * e1n * de1dtintlim) / sqr(j1n);
-		
+
+		//da2dt from a2 = p2 / (1-sqr(e2n))
+		double dp2dtintlim = (-3*pow(c,-2)*pow(G,1.5)*pow(j1n,-6)*(s2g2*(c2g1*(3 + c2inc)*(49 - 17*pow(j1n,2)) + 10*sincsq*(7 - 3*pow(j1n,2))) + 4*c2g2*cinc*s2g1*(-49 + 17*pow(j1n,2)))*(-7 + pow(j2n,2))*(-1 + pow(j2n,2))*pow(j2n,3)*pow(m,-1)*pow(mtot,2.5)*pow(p1,3)*pow(p2,-4.5))/64.;
+		da2dt += (dp2dtintlim + 2. * a2 * e2n * de2dtintlim) / sqr(j2n);
 
 	}
 
 	//Add the pericenter precession of the inner binary
 	if (kozai->get_pericenter() == true)
 		de1dt += (3./(c*c*a1*sqr(j1n)))*(pow(G*(m1+m2)/a1, 1.5) * (n1^e1));
+
+	if (kozai->get_outerpericenter() == true)
+		de2dt += (3./(c*c*a2*sqr(j2n)))*(pow(G*(m1+m2+m3)/a2, 1.5) * (n2^e2));
 
 	//Add spin-orbit coupling for the inner binary 
 	if (kozai->get_spinorbit() == true){
@@ -587,6 +560,7 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
 		f[i+15] = ds2dt[i];
 	}
 	f[18] = dadt;
+	f[19] = da2dt;
 
 	return GSL_SUCCESS;
 }
@@ -633,25 +607,6 @@ void set_parameters(int argc, char **argv, kozai_struct *kozai, double &t_end, d
 		{"omega1",1,  0, 'l'},
 		{"omega2",1,  0, 'L'},
 		{"inc"   ,1,  0, 'i'},
-		{"coordini", 0, 0, 'N'},
-		{"r1x"   ,1,  0, 'f'},
-		{"r2x"   ,1,  0, 'F'},
-		{"r3x"   ,1,  0, 'j'},
-		{"r1y"   ,1,  0, 'J'},
-		{"r2y"   ,1,  0, 'k'},
-		{"r3y"   ,1,  0, 'K'},
-		{"r1z"   ,1,  0, 'Q'},
-		{"r2z"   ,1,  0, 'R'},
-		{"r3z"   ,1,  0, 'H'},
-		{"v1x"   ,1,  0, 'P'},
-		{"v2x"   ,1,  0, 'v'},
-		{"v3x"   ,1,  0, 'V'},
-		{"v1y"   ,1,  0, 'w'},
-		{"v2y"   ,1,  0, 'W'},
-		{"v3y"   ,1,  0, 'x'},
-		{"v1z"   ,1,  0, 'X'},
-		{"v2z"   ,1,  0, 'y'},
-		{"v3z"   ,1,  0, 'Y'},
 		{"rad1"   ,1,  0, 'b'},
 		{"rad2"   ,1,  0, 'B'},
 		{"chi1"   ,1,  0, 'c'},
@@ -666,6 +621,7 @@ void set_parameters(int argc, char **argv, kozai_struct *kozai, double &t_end, d
 		{"cross_naoz"   ,0,  0, 'z'},
 		{"cross_lim"   ,0,  0, 'Z'},
 		{"peri"  ,0,  0, 'p'},
+		{"outerperi", 0, 0, 'N'},
 		{"spinorbit"  ,0,  0, 's'},
 		{"spinspin"   ,0,  0, 'S'},
 		{"rad"   ,0,  0, 'r'},
@@ -677,7 +633,7 @@ void set_parameters(int argc, char **argv, kozai_struct *kozai, double &t_end, d
 	};
 
 	while ((c = getopt_long (argc, argv, 
-					"m:M:n:a:A:e:E:g:G:l:L:i:Nf:F:j:J:k:K:Q:R:H:P:v:V:w:W:x:X:y:Y:b:B:c:C:t:T:u:U:qoOzZpsSrId:D:h",
+					"m:M:n:a:A:e:E:g:G:l:L:i:b:B:c:C:t:T:u:U:qoOzZpNsSrId:D:h",
 					longopts,&option_index)) != -1)
 	switch (c)
     {
@@ -687,7 +643,6 @@ void set_parameters(int argc, char **argv, kozai_struct *kozai, double &t_end, d
 		  kozai->set_m2(atof(optarg)*MSUN); break;
 		case 'n':
 		  kozai->set_m3(atof(optarg)*MSUN); break;
-
 
 		// Options used when specifying elements
 		case 'a':
@@ -708,46 +663,6 @@ void set_parameters(int argc, char **argv, kozai_struct *kozai, double &t_end, d
 		  kozai->set_Omega2(atof(optarg)*DEG); break;
 		case 'i':
 		  kozai->set_inc(atof(optarg)*DEG); break;
-
-		// Options used when specifying positions and velocities
-  		case 'N':
-		  kozai->set_coordini(true); break;
-		case 'f':
-		  kozai->set_r1x(atof(optarg)*AU); break;
-		case 'F':
-		  kozai->set_r2x(atof(optarg)*AU); break;
-		case 'j':
-		  kozai->set_r3x(atof(optarg)*AU); break;
-		case 'J':
-		  kozai->set_r1y(atof(optarg)*AU); break;
-		case 'k':
-		  kozai->set_r2y(atof(optarg)*AU); break;
-		case 'K':
-		  kozai->set_r3y(atof(optarg)*AU); break;
-		case 'Q':
-		  kozai->set_r1z(atof(optarg)*AU); break;
-		case 'R':
-		  kozai->set_r2z(atof(optarg)*AU); break;
-		case 'H':
-		  kozai->set_r3z(atof(optarg)*AU); break;
-		case 'P':
-		  kozai->set_v1x(atof(optarg)*KM); break;
-		case 'v':
-		  kozai->set_v2x(atof(optarg)*KM); break;
-		case 'V':
-		  kozai->set_v3x(atof(optarg)*KM); break;
-		case 'w':
-		  kozai->set_v1y(atof(optarg)*KM); break;
-		case 'W':
-		  kozai->set_v2y(atof(optarg)*KM); break;
-		case 'x':
-		  kozai->set_v3y(atof(optarg)*KM); break;
-		case 'X':
-		  kozai->set_v1z(atof(optarg)*KM); break;
-		case 'y':
-		  kozai->set_v2z(atof(optarg)*KM); break;
-		case 'Y':
-		  kozai->set_v3z(atof(optarg)*KM); break;
 
 		// Options used when specifying   
 		case 'b':
@@ -778,6 +693,8 @@ void set_parameters(int argc, char **argv, kozai_struct *kozai, double &t_end, d
 		  kozai->set_1PNcross_lim(true); break;
 		case 'p':
 		  kozai->set_pericenter(true); break;
+		case 'N':
+		  kozai->set_outerpericenter(true); break;
 		case 's':
 		  kozai->set_spinorbit(true); break;
 		case 'S':
