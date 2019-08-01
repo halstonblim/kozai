@@ -61,7 +61,8 @@ void print_state(double t_next, kozai_struct *kozai, ostream& stream = cerr){
 	streamsize ss = stream.precision();
 
 	stream << setprecision(14) << (t_next/YEAR) << "  " 
-		 << kozai->get_a1()/AU << "  " 
+		<< kozai->get_a1()/AU << "  " 
+    << kozai->get_a2()/AU << " "
 		<< kozai->get_ecc1() << "  "
 		<< setprecision(ss)
 		<< kozai->get_ecc2() << "  " 
@@ -70,6 +71,8 @@ void print_state(double t_next, kozai_struct *kozai, ostream& stream = cerr){
 		<< kozai->get_inc2()/DEG << "  " 
 		<< kozai->get_g1()/DEG << "  " 
 		<< kozai->get_g2()/DEG << "  "
+    << kozai->get_Omega1()/DEG << " "
+    << kozai->get_Omega2()/DEG << " "
 		<< kozai->get_theta1()/DEG << "  " 
 		<< kozai->get_theta2()/DEG << "  " 
 		<< kozai->get_deltaPhi()/DEG << "  " 
@@ -104,7 +107,7 @@ int main(int argc, char **argv){
 	const gsl_odeiv2_step_type *type_ptr = gsl_odeiv2_step_rk8pd;
 
 	gsl_odeiv2_step *step_ptr = gsl_odeiv2_step_alloc(type_ptr, DIMENSION);
-	gsl_odeiv2_control *control_ptr = gsl_odeiv2_control_y_new(eps_abs, eps_rel);
+  gsl_odeiv2_control *control_ptr = gsl_odeiv2_control_y_new(eps_abs, eps_rel);
 	gsl_odeiv2_evolve *evolve_ptr = gsl_odeiv2_evolve_alloc(DIMENSION);
 	gsl_odeiv2_system my_system;
 
@@ -162,6 +165,12 @@ int main(int argc, char **argv){
 				break;
 			}
 
+      //check for GSL_FAILURE and print state
+      if(status != GSL_SUCCESS && IGNORE_GSL_ERRORS) {
+        cout << "error, return status = " << status << endl;
+        cout << "error, print state = " << endl;
+        print_state(t,kozai,cout);
+      }
 
 			//check for some type of failure/NaN
 			if ((status != GSL_SUCCESS && !IGNORE_GSL_ERRORS) || isnan(kozai->get_ecc1()) || kozai->get_ecc1() >= 1.){
@@ -191,6 +200,7 @@ int main(int argc, char **argv){
 
 		if (failure == true){
 			cout << "NaNs (if near merger, try --ignore_gsl)!" << endl;
+      print_state(t,kozai,cout);
 			break;
 		}
 	}
@@ -210,29 +220,29 @@ int main(int argc, char **argv){
 void print_header_and_initial_state(kozai_struct* kozai){
 
 	cout << "Triple setup:\n"  
-		<< "  m1 = " << kozai->get_m1()/MSUN << endl
-		<< "  m2 = " << kozai->get_m2()/MSUN << endl
-		<< "  m3 = " << kozai->get_m3()/MSUN << endl
-		<< "  a1 = " << kozai->get_a1()/AU << endl
-		<< "  a2 = " << kozai->get_a2()/AU << endl
-		<< "  e1 = " << kozai->get_ecc1() << endl
-		<< "  e2 = " << kozai->get_ecc2() << endl
-		<< "  g1 = " << kozai->get_g1()/DEG << endl
-		<< "  g2 = " << kozai->get_g2()/DEG << endl
-		<< "  Omega1 = " << kozai->get_Omega1()/DEG << endl
-		<< "  Omega2 = " << kozai->get_Omega2()/DEG << endl
-		<< "  inc = " << kozai->get_inc()/DEG << endl
-		<< "  inc 1 = " << kozai->get_inc1()/DEG << endl
-		<< "  inc 2 = " << kozai->get_inc2()/DEG << endl
-		<< "  radius 1 = " << kozai->get_r1()/RSUN << endl
-		<< "  radius 2 = " << kozai->get_r2()/RSUN << endl
-		<< "  theta 1 = " << kozai->get_theta1()/DEG << endl
-		<< "  theta 2 = " << kozai->get_theta2()/DEG << endl
-		<< "  delta Phi = " << kozai->get_deltaPhi()/DEG << endl;
-	
+		<< "m1 = " << kozai->get_m1()/MSUN << endl
+		<< "m2 = " << kozai->get_m2()/MSUN << endl
+		<< "m3 = " << kozai->get_m3()/MSUN << endl
+		<< "a1 = " << kozai->get_a1()/AU << endl
+		<< "a2 = " << kozai->get_a2()/AU << endl
+		<< "e1 = " << kozai->get_ecc1() << endl
+		<< "e2 = " << kozai->get_ecc2() << endl
+		<< "g1 = " << kozai->get_g1()/DEG << endl
+		<< "g2 = " << kozai->get_g2()/DEG << endl
+		<< "omega1 = " << kozai->get_Omega1()/DEG << endl
+		<< "omega2 = " << kozai->get_Omega2()/DEG << endl
+		<< "inc = " << kozai->get_inc()/DEG << endl
+		<< "inc 1 = " << kozai->get_inc1()/DEG << endl
+		<< "inc 2 = " << kozai->get_inc2()/DEG << endl
+		<< "radius 1 = " << kozai->get_r1()/RSUN << endl
+		<< "radius 2 = " << kozai->get_r2()/RSUN << endl
+		<< "theta 1 = " << kozai->get_theta1()/DEG << endl
+		<< "theta 2 = " << kozai->get_theta2()/DEG << endl
+		<< "delta Phi = " << kozai->get_deltaPhi()/DEG << endl;
+	 
 	//Print the header with units and column names, and the initial state of the
 	//system
-	cerr << "#1:t[yr]  #2:a1[AU]  #3:e1  #4:e2  #5:inc[deg] #6:i1  #7:i2  #8:g1  #9:g2  #10:theta1  #11:theta2  #12:dPhi #13:Theta1 #14:Theta2 #15:SS" << endl;
+	cerr << "#1:t[yr]  #2:a1[AU] #3:a2[AU] #4:e1  #5:e2  #6:inc[deg] #7:i1  #8:i2  #9:g1  #10:g2 #11:Omega1 #12:Omega2 #13:theta1  #14:theta2  #15:dPhi #16:Theta1 #17:Theta2 #18:SS" << endl;
 }
 
 
@@ -444,7 +454,7 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
 	}
 
 	if(kozai->get_1PNcross_lim() == true){
-		// Equations only apply for m3 >> m1, m2
+		// Equations only apply for leading order m3 >> m1, m2 cross terms
 
 		// f(e,eta), g(e,eta) Will (89:044043, 2014) eq. 4.15
 		double eta = m1*m2 / sqr(m);
@@ -454,22 +464,22 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
 		double inc1 = kozai->get_inc1();
 
 		// // de1dt
-		double de1dtintlim =(-15*(-4*c2g1*cinc*s2g2 + s2g1*(c2g2*(3 + c2inc) + 6*sincsq))*pow(c,-2)*pow(G,1.5)*pow(j1n,-2)*(-1 + pow(j2n,2))*pow(j2n,3)*pow(m,-0.5)*pow(mtot,2)*pow(p1,1.5)*pow(p2,-4)*pow(1 - pow(j1n,2),0.5))/16.;
+		double de1dtintlim = (3*(-1 + j1n)*mtot*s2g1*sincsq*pow(c,-2)*pow(e1n,-1)*pow(G,1.5)*(11 + 22*j1n + (23 - 12*eta)*pow(j1n,2))*pow(1 + j1n,-1)*pow(m,0.5)*pow(p1,0.5)*pow(p2,-3)*pow(1 - pow(e2n,2),1.5))/8.;
 		de1dt += de1dtintlim * u1;
 		dj1dt += (-e1n / j1n) * de1dtintlim * n1;
 
 		// // de2dt
-		double de2dtintlim =(-3*pow(c,-2)*pow(G,1.5)*pow(j1n,-6)*(s2g2*(c2g1*(3 + c2inc)*(49 - 17*pow(j1n,2)) + 10*sincsq*(7 - 3*pow(j1n,2))) + 4*c2g2*cinc*s2g1*(-49 + 17*pow(j1n,2)))*pow(j2n,3)*(120 - 89*pow(j2n,2) + 7*pow(j2n,4))*pow(m,-1)*pow(mtot,2.5)*pow(p1,3)*pow(p2,-5.5)*pow(1 - pow(j2n,2),0.5))/512.;
+		double de2dtintlim = (-3*e2n*pow(c,-2)*pow(G,1.5)*pow(j1n,-6)*(s2g2*(c2g1*(3 + c2inc)*(49 - 17*pow(j1n,2)) + 10*sincsq*(7 - 3*pow(j1n,2))) + 4*c2g2*cinc*s2g1*(-49 + 17*pow(j1n,2)))*pow(j2n,3)*(120 - 89*pow(j2n,2) + 7*pow(j2n,4))*pow(m,-1)*pow(mtot,2.5)*pow(p1,3)*pow(p2,-5.5))/512.;
 		de2dt += de2dtintlim * u2;
 		dj2dt += (-e2n / j2n) * de2dtintlim * n2;
 
 		// // di1dt
-		double di1dtintlim = (3*sinc*pow(c,-2)*pow(G,1.5)*pow(j1n,-4)*(s2g2*(5 - 5*c2g1*(-1 + pow(j1n,2)) - 3*pow(j1n,2)) + 5*(-3 + c2g2)*cinc*s2g1*(-1 + pow(j1n,2)))*(-1 + pow(j2n,2))*pow(j2n,3)*pow(m,-0.5)*pow(mtot,2)*pow(p1,1.5)*pow(p2,-4))/8.;
+		double di1dtintlim = (3*sinc*pow(c,-2)*pow(e2n,2)*pow(G,1.5)*pow(j1n,-4)*(5*(-3 + c2g2)*cinc*s2g1*pow(e1n,2) + s2g2*(-5 - 5*c2g1*pow(e1n,2) + 3*pow(j1n,2)))*pow(j2n,3)*pow(m,-0.5)*pow(mtot,2)*pow(p1,1.5)*pow(p2,-4))/8.;
 		de1dt += ((e1n*sg1)*n1) * di1dtintlim;
 		dj1dt += ((-j1n*sg1)*u1 + (-j1n*cg1)*v1) * di1dtintlim;
 
 		// // // di2dt
-		double di2dtintlim = (-3*eta*sinc*pow(c,-2)*pow(G,1.5)*pow(j1n,-4)*(5*(5 + 2*c2g2)*s2g1*(-1 + pow(j1n,2)) + 2*cinc*s2g2*(-5 - 5*c2g1*(-1 + pow(j1n,2)) + 3*pow(j1n,2)))*(-1 + pow(j2n,2))*pow(j2n,3)*pow(mtot,1.5)*pow(p1,2)*pow(p2,-4.5))/8.;
+		double di2dtintlim = (-3*eta*sinc*pow(c,-2)*pow(e2n,2)*pow(G,1.5)*pow(j1n,-4)*(5*(5 + 2*c2g2)*s2g1*pow(e1n,2) - 2*cinc*s2g2*(-5 + 5*c2g1*pow(e1n,2) + 3*pow(j1n,2)))*pow(j2n,3)*pow(mtot,1.5)*pow(p1,2)*pow(p2,-4.5))/8.;
 		de2dt += ((e2n*sg2)*n2) * di2dtintlim;
 		dj2dt += ((-j2n*sg2)*u2 + (-j2n*cg2)*v2) * di2dtintlim;
 
@@ -501,12 +511,21 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
 		double dp2dtintlim = (-3*pow(c,-2)*pow(G,1.5)*pow(j1n,-6)*(s2g2*(c2g1*(3 + c2inc)*(49 - 17*pow(j1n,2)) + 10*sincsq*(7 - 3*pow(j1n,2))) + 4*c2g2*cinc*s2g1*(-49 + 17*pow(j1n,2)))*(-7 + pow(j2n,2))*(-1 + pow(j2n,2))*pow(j2n,3)*pow(m,-1)*pow(mtot,2.5)*pow(p1,3)*pow(p2,-4.5))/64.;
 		da2dt += (dp2dtintlim + 2. * a2 * e2n * de2dtintlim) / sqr(j2n);
 
+    //print state for debugging 
+    /*
+    cout<< dp1dtintlim << " " << dp2dtintlim << " " 
+        << de1dtintlim << " " << de2dtintlim << " " 
+        << di1dtintlim << " " << di2dtintlim << " "
+        << dg1dtintlim << " " << dg2dtintlim << " "  
+        << dh1dtintlim << " " << dh2dtintlim << endl; */
+
 	}
 
 	//Add the pericenter precession of the inner binary
 	if (kozai->get_pericenter() == true)
 		de1dt += (3./(c*c*a1*sqr(j1n)))*(pow(G*(m1+m2)/a1, 1.5) * (n1^e1));
-
+  
+  //Add the pericenter precession of the outer binary
 	if (kozai->get_outerpericenter() == true)
 		de2dt += (3./(c*c*a2*sqr(j2n)))*(pow(G*(m1+m2+m3)/a2, 1.5) * (n2^e2));
 

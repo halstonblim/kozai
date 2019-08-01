@@ -17,7 +17,7 @@ using namespace std;
 #include <gsl/gsl_integration.h>
 
 #define sqr(x) ((x)*(x))
-#define DIMENSION 19
+#define DIMENSION 20
 
 #define PRI(x) {for (int __pri__ = 0; __pri__ < x; __pri__++) cerr << " ";}
 #define PR(x)  cerr << #x << " = " << x << " "
