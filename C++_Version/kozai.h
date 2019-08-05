@@ -92,6 +92,7 @@ class kozai_struct
 		double Omega2;
 		double r1;
 		double r2;
+    double tsec0;
 
 		//Spin information for inner binary
 		double chi1;
@@ -189,6 +190,15 @@ class kozai_struct
 			m2m1 = m2/m1;
 			eta = mu1 / (m1+m2);
 
+      //Set initial kozai timescale
+      double j1n = sqrt(1-sqr(e1));
+      double j2n = sqrt(1-sqr(e2));
+      double p1 = a1 * (1-sqr(e1));
+      double p2 = a2 * (1-sqr(e2));
+      double m = m1 + m2;
+      double mtot = m + m3;
+      tsec0 = pow(G,-0.5)*pow(j1n,3)*pow(j2n,-3)*pow(m,0.5)*pow(mtot,-1)*pow(p1,-1.5)*pow(p2,3);
+
 			//If no radius specified, set to the Schwarzschild ISCO 
 			if(r1 == 0.) r1 = 2*1476.*m1/MSUN; 
 			if(r2 == 0.) r2 = 2*1476.*m2/MSUN;
@@ -257,6 +267,9 @@ class kozai_struct
 		//The getters and setters for the class;
 		//better to use this than the constructor
 		//
+
+    double get_tsec0() {return tsec0;}		
+
 		//The inner binary
 		void set_a1(double a1_i) {a1=a1_i;}
 		double get_a1() {return y[18];}
