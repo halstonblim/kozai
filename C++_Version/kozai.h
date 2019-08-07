@@ -17,7 +17,7 @@ using namespace std;
 #include <gsl/gsl_integration.h>
 
 #define sqr(x) ((x)*(x))
-#define DIMENSION 19
+#define DIMENSION 20
 
 #define PRI(x) {for (int __pri__ = 0; __pri__ < x; __pri__++) cerr << " ";}
 #define PR(x)  cerr << #x << " = " << x << " "
@@ -112,6 +112,8 @@ class kozai_struct
 		bool quadrupole;
 		bool octupole;
 		bool pericenter;
+        bool outerpericenter;
+        bool crossterms;
 		bool spinorbit;
 		bool spinspin;
 		bool radiation;
@@ -135,7 +137,7 @@ class kozai_struct
 			  double ig1=199.31831, double ig2=237.15944, double im1=24.22645, double im2=14.999986, double im3=21.509239,
 			  double iOmega1=321.97666, double iOmega2=141.97666, double ir1=0, double ir2=0,  double ichi1=1, double ichi2=1,
 			  double itheta1=0, double itheta2=0, double iphi1=0, double iphi2=0,
-			  bool iquad=false, bool ioct=false, bool iperi=false, bool iso=false, bool iss=false, bool rad=false)
+			  bool iquad=false, bool ioct=false, bool iperi=false, bool ioperi=false, bool icross=false, bool iso=false, bool iss=false, bool rad=false)
 			{	
 				a1=ia1*AU;
 				a2=ia2*AU;
@@ -160,6 +162,8 @@ class kozai_struct
 				quadrupole=iquad;
 				octupole=ioct;
 				pericenter=iperi;
+                outerpericenter=ioperi;
+                crossterms=icross;
 				spinorbit=iso;
 				spinspin=iss;
 				radiation=rad;
@@ -241,6 +245,7 @@ class kozai_struct
 				y[i+15] = s2_init[i];
 			}
 			y[18] = a1;
+            y[19] = a2;
 		}
 
 		//The getters and setters for the class;
@@ -282,7 +287,7 @@ class kozai_struct
 
 		//Outer Binary
 		void set_a2(double a2_i) {a2=a2_i;}
-		double get_a2() {return a2;}
+		double get_a2() {return y[19];}
 
 		void set_ecc2(double e2_i) {e2=e2_i;}
 		double get_ecc2() {return abs(this->get_e2());}
@@ -416,6 +421,12 @@ class kozai_struct
 
 		void set_pericenter(bool pericenter_i) {pericenter=pericenter_i;}
 		bool get_pericenter() {return pericenter;}
+
+        void set_outer_pericenter(bool opericenter_i) {outerpericenter=opericenter_i;}
+        bool get_outer_pericenter() {return outerpericenter;}
+
+        void set_cross_lim(bool cross_i) {crossterms=cross_i;}
+        bool get_cross_lim() {return crossterms;}
 
 		void set_spinorbit(bool spinorbit_i) {spinorbit=spinorbit_i;}
 		bool get_spinorbit() {return spinorbit;}

@@ -41,7 +41,9 @@ Parameters:\n\
 Flags:\n\
   --quad       Include quadrupole terms \n\
   --oct        Include octupole Terms\n\
-  --peri       Include pericenter precession (1pN) terms\n\
+  --peri       Include inner pericenter precession (1pN) terms\n\
+  --outerperi  Include outer pericenter precession (1pN) terms\n\
+  --cross_lim  Include 1pN-quadrupole cross terms\n\
   --spinorbit  Include spin-orbit (1.5pN) terms\n\
   --spinspin   Include spin-spin (2pN) terms\n\
   --rad        Include gravitational-wave emission (2.5pN)\n\
@@ -89,6 +91,7 @@ int main(int argc, char **argv){
 	double max_e=0.;
 	int status;
 
+    eps_rel *= 1e-6;
 
 	//First, initialize the Kozai structure
 	kozai_struct *kozai = new kozai_struct;
@@ -249,7 +252,7 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
 
 	//extract semi-major axes, masses and angular momenta
 	double a1 = y[18];
-	double a2 = kozai->get_a2();
+    double a2 = y[19];
 	double m1 = kozai->get_m1();
 	double m2 = kozai->get_m2();
 	double m3 = kozai->get_m3();
@@ -318,6 +321,45 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
 	if (kozai->get_pericenter() == true)
 		de1dt += (3./(c*c*a1*sqr(j1n)))*(pow(G*(m1+m2)/a1, 1.5) * (n1^e1));
 
+    //Add the pericenter precession of the outer binary
+    if (kozai->get_outer_pericenter() == true)
+        de2dt += (3./(c*c*a2*sqr(j2n)))*(pow(G*(m1+m2+m3)/a2, 1.5) * (n2^e2));
+
+    //Add 1pn-quadrupole cross terms
+    if (kozai->get_cross_lim() == true){   
+        // precompute various quantities
+        vec v1 = n1^u1;
+        vec v2 = n2^u2;
+        double p2    = a2 * sqr(j2n);
+        double m = m1+m2;
+        double mtot = m + m3;
+        double G1 = L1 * j1n;
+        double G2 = L2 * j2n;
+        double Gtot = abs(G1 + G2);
+        
+        // Avoid evaluating angles; use vectors; Naoz et al (2013a) Appendix A
+        double cinc = n1*n2;
+        double sinc  = sqrt(1.-sqr(cinc));
+        double cinc1 = n1[2];
+        double cg1sinc1    = (n2*v1) * G2 / Gtot;
+        double sg1sinc1    = (n2*u1) * G2 / Gtot;
+        double cotinc1sinc = cinc1 * Gtot / G2;
+        double cscinc1sinc = Gtot / G2;
+
+        // 1PN-quadrupole cross terms; Lim Rodriguez (2019)
+        // Convert element equations to vector equations; Liu Munoz Lai (2015)
+        // dg1dt
+        double dg1dtintlim = (3*(cinc - cotinc1sinc)*pow(c,-2)*pow(G,1.5)*pow(j2n,3)*pow(mtot,1.5)*pow(p2,-2.5))/2.;
+        de1dt += ((e1n)*v1) * dg1dtintlim;
+        dj1dt += 0.;
+        
+        // dh1dt 
+        double dh1dtintlim = (3*cscinc1sinc*pow(c,-2)*pow(G,1.5)*pow(j2n,3)*pow(mtot,1.5)*pow(p2,-2.5))/2.;
+        de1dt += ((e1n*cinc1)*v1    + (-e1n*cg1sinc1)*n1) * dh1dtintlim;
+        dj1dt += ((j1n*cg1sinc1)*u1 + (-j1n*sg1sinc1)*v1) * dh1dtintlim;
+
+    }
+
 	//Add spin-orbit coupling for the inner binary 
 	if (kozai->get_spinorbit() == true){
 		vec seff = (1+0.75*kozai->get_m2m1()) * s1 + (1+0.75*kozai->get_m1m2()) * s2;
@@ -368,6 +410,7 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
 		f[i+15] = ds2dt[i];
 	}
 	f[18] = dadt;
+    f[19] = 0;
 
 	return GSL_SUCCESS;
 }
@@ -414,8 +457,8 @@ void set_parameters(int argc, char **argv, kozai_struct *kozai, double &t_end, d
 		{"omega1",1,  0, 'l'},
 		{"omega2",1,  0, 'L'},
 		{"inc"   ,1,  0, 'i'},
-		{"rad1"   ,1,  0, 'c'},
-		{"rad2"   ,1,  0, 'C'},
+		{"rad1"   ,1,  0, 'b'},
+		{"rad2"   ,1,  0, 'B'},
 		{"chi1"   ,1,  0, 'c'},
 		{"chi2"   ,1,  0, 'C'},
 		{"theta1"   ,1,  0, 't'},
@@ -425,6 +468,8 @@ void set_parameters(int argc, char **argv, kozai_struct *kozai, double &t_end, d
 		{"quad"  ,0,  0, 'q'},
 		{"oct"   ,0,  0, 'o'},
 		{"peri"  ,0,  0, 'p'},
+        {"outerperi",0,0,'P'},
+        {"cross_lim",0,0,'X'},
 		{"spinorbit"  ,0,  0, 's'},
 		{"spinspin"   ,0,  0, 'S'},
 		{"rad"   ,0,  0, 'r'},
@@ -436,7 +481,7 @@ void set_parameters(int argc, char **argv, kozai_struct *kozai, double &t_end, d
 	};
 
 	while ((c = getopt_long (argc, argv, 
-					"m:M:n:a:A:e:E:g:G:l:L:i:c:C:t:T:u:U:qopsSrId:D:b:B:h",
+					"m:M:n:a:A:e:E:g:G:l:L:i:c:C:t:T:u:U:qopPXsSrId:D:b:B:h",
 					longopts,&option_index)) != -1)
 	switch (c)
     {
@@ -486,6 +531,10 @@ void set_parameters(int argc, char **argv, kozai_struct *kozai, double &t_end, d
 		  kozai->set_octupole(true); break;
 		case 'p':
 		  kozai->set_pericenter(true); break;
+        case 'P':
+          kozai->set_outer_pericenter(true); break;
+        case 'X':
+          kozai->set_cross_lim(true); break;
 		case 's':
 		  kozai->set_spinorbit(true); break;
 		case 'S':
