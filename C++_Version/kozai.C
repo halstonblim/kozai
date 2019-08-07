@@ -297,7 +297,7 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
 
 	//Add the octupole-order secular evolution equations
 	if(kozai->get_octupole() == true){
-		double octo_coef = 1.171875*((m1-m2)/(m1+m2)*(a1/a2)*(e2n/sqr(j2n)))/tsec;
+		double octo_coef = -1.171875*((m1-m2)/(m1+m2)*(a1/a2)*(e2n/sqr(j2n)))/tsec;
 		dj1dt += octo_coef*((((2.*(e1u2*j1n2+e1n2*j1u2)*j1)
 				+ 2.*(j1u2*j1n2-7.*e1u2*e1n2)*e1)^n2) + ((((2.*e1n2*j1n2)*j1)
 				+ (1.6*sqr(e1n) - 0.2 - 7.*sqr(e1n2) + sqr(j1n2))*e1)^u2));
