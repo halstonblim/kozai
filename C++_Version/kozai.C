@@ -252,7 +252,7 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
 
 	//extract semi-major axes, masses and angular momenta
 	double a1 = y[18];
-    double a2 = y[19];
+  double a2 = y[19];
 	double m1 = kozai->get_m1();
 	double m2 = kozai->get_m2();
 	double m3 = kozai->get_m3();
@@ -286,7 +286,7 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
 	double tsec = (sqrt((m1+m2)/(G*pow(a1,3.)))*pow(a2,3.)*pow(1.-sqr(e2n),1.5) /m3);
 
 	vec dj1dt, de1dt=0., dj2dt, de2dt=0., ds1dt, ds2dt;
-	double dadt  = 0;
+	double dadt  = 0, da2dt = 0.;
 
 	//Add the quadrupole-order secular evolution equations
 	if(kozai->get_quadrupole()){
@@ -321,42 +321,110 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
 	if (kozai->get_pericenter() == true)
 		de1dt += (3./(c*c*a1*sqr(j1n)))*(pow(G*(m1+m2)/a1, 1.5) * (n1^e1));
 
-    //Add the pericenter precession of the outer binary
-    if (kozai->get_outer_pericenter() == true)
-        de2dt += (3./(c*c*a2*sqr(j2n)))*(pow(G*(m1+m2+m3)/a2, 1.5) * (n2^e2));
+  //Add the pericenter precession of the outer binary
+  if (kozai->get_outer_pericenter() == true)
+    de2dt += (3./(c*c*a2*sqr(j2n)))*(pow(G*(m1+m2+m3)/a2, 1.5) * (n2^e2));
 
-    //Add 1pn-quadrupole cross terms
-    if (kozai->get_cross_lim() == true){   
-        // precompute various quantities
-        vec v1 = n1^u1;
-        vec v2 = n2^u2;
-        double p2    = a2 * sqr(j2n);
-        double m = m1+m2;
-        double mtot = m + m3;
-        double G1 = L1 * j1n;
-        double G2 = L2 * j2n;
-        double Gtot = abs(G1 + G2);
+  //Add 1pn-quadrupole cross terms
+  if (kozai->get_cross_lim() == true){   
+    // precompute various quantities
+    vec v1 = n1^u1;
+    vec v2 = n2^u2;
+    double p2    = a2 * sqr(j2n);
+    double m = m1+m2;
+    double eta = m1*m2/sqr(m);
+    double mtot = m + m3;
+    double G1 = L1 * j1n;
+    double G2 = L2 * j2n;
+    double Gtot = abs(G1 + G2);
         
-        // Avoid evaluating angles; use vectors; Naoz et al (2013a) Appendix A
-        double cinc = n1*n2;
-        double sinc  = sqrt(1.-sqr(cinc));
-        double cinc1 = n1[2];
-        double cg1sinc1    = (n2*v1) * G2 / Gtot;
-        double sg1sinc1    = (n2*u1) * G2 / Gtot;
-        double cotinc1sinc = cinc1 * Gtot / G2;
-        double cscinc1sinc = Gtot / G2;
+    // Define trig funcs wrt to inc, i1
+    // Avoid evaluating angles; use vectors; Naoz et al (2013a) Appendix A
+    double cinc    = n1*n2;
+    double sinc    = sqrt(1.-sqr(cinc));
+    double sincsq  = sqr(sinc);
+    double cincsq  = sqr(cinc);
+    double c2inc   = 1 - 2*sqr(sinc);
+    double cinc1 = n1[2];
+    double sinc1 = sinc * G2 / Gtot;
+    double cg1sinc1    = (n2*v1) * G2 / Gtot;
+    double sg1sinc1    = (n2*u1) * G2 / Gtot;
+    double cotinc1sinc = cinc1 * Gtot / G2;
+    double cscinc1sinc = Gtot / G2;
 
-        // 1PN-quadrupole cross terms; Lim Rodriguez (2019)
-        // Convert element equations to vector equations; Liu Munoz Lai (2015)
-        // dg1dt
-        double dg1dtintlim = (3*(cinc - cotinc1sinc)*pow(c,-2)*pow(G,1.5)*pow(j2n,3)*pow(mtot,1.5)*pow(p2,-2.5))/2.;
-        de1dt += ((e1n)*v1) * dg1dtintlim;
-        dj1dt += 0.;
-        
-        // dh1dt 
-        double dh1dtintlim = (3*cscinc1sinc*pow(c,-2)*pow(G,1.5)*pow(j2n,3)*pow(mtot,1.5)*pow(p2,-2.5))/2.;
-        de1dt += ((e1n*cinc1)*v1    + (-e1n*cg1sinc1)*n1) * dh1dtintlim;
-        dj1dt += ((j1n*cg1sinc1)*u1 + (-j1n*sg1sinc1)*v1) * dh1dtintlim;
+    // Define trig functions wrt to g1, g2; Goes bad as sinc -> 0
+    double cg1 = (n2*v1) / sinc;
+    double sg1 = (n2*u1) / sinc;
+    double cg2 = (n1*v2) / sinc;
+    double sg2 = (n1*u2) / sinc;
+    double c2g1 = 1 - 2*sqr(sg1);
+    double s2g1 = 2 * sg1 * cg1;
+    double c2g2 = 1 - 2*sqr(sg2);
+    double s2g2 = 2 * sg2 * cg2;
+
+    // 1PN-quadrupole cross terms; Lim Rodriguez (2019)
+
+    //de1dt 
+    // (nr, nm) = (1.5, -0.5)
+    double de1dtintlim = (-3*eta*(-1 + j1n)*(-5*(-2 + eta) + (-14 + 11*eta)*j1n)*(c2g2*(3 + c2inc)*s2g1 - 4*c2g1*cinc*s2g2)*pow(a1,-0.5)*pow(a2,-2)*pow(c,-2)*pow(e1n,-1)*pow(G,1.5)*pow(j1n,2)*pow(1 + j1n,-1)*pow(j2n,-1)*pow(1 + j2n,-2)*pow(m,1.5))/8.;
+    de1dt += de1dtintlim * u1;
+    dj1dt += (-e1n / j1n) * de1dtintlim * n1;
+
+    //de2dt 
+    // (nr, nm) = (3, -1)
+    double de2dtintlim = (-3*e2n*pow(a1,3)*pow(a2,-5.5)*pow(c,-2)*pow(G,1.5)*(s2g2*(c2g1*(3 + c2inc)*(49 - 17*pow(j1n,2)) + 10*sincsq*(7 - 3*pow(j1n,2))) + 4*c2g2*cinc*s2g1*(-49 + 17*pow(j1n,2)))*pow(j2n,-8)*(120 + pow(j2n,2)*(-89 + 7*pow(j2n,2)))*pow(m,-1)*pow(mtot,2.5))/512.;
+    // (nr, nm) = (-0.5, 1.5)
+    de2dtintlim += (-45*e2n*eta*(-4*c2g1*cinc*s2g2 + s2g1*(c2g2*(3 + c2inc) + 12*sincsq))*pow(a1,-0.5)*pow(a2,-2)*pow(c,-2)*pow(e1n,2)*pow(G,1.5)*pow(j1n,-2)*pow(j2n,-3)*pow(m,1.5))/64.;
+    de2dt += de2dtintlim * u2;
+    dj2dt += (-e2n / j2n) * de2dtintlim * n2;
+   
+    //di1dt 
+    // (nr, nm) = (1.5, -0.5)
+    double di1dtintlim = (-3*sinc*pow(a1,1.5)*pow(a2,-4)*pow(c,-2)*pow(e2n,2)*pow(G,1.5)*pow(j1n,-1)*(-5*(-3 + c2g2)*cinc*s2g1*pow(e1n,2) + s2g2*(5 + 5*c2g1*pow(e1n,2) - 3*pow(j1n,2)))*pow(j2n,-5)*pow(m,-0.5)*pow(mtot,2))/8.;
+    de1dt += ((e1n*sg1)*n1) * di1dtintlim;
+    dj1dt += ((-j1n*sg1)*u1 + (-j1n*cg1)*v1) * di1dtintlim;
+
+    //di2dt 
+    // no contribution from dominant cross terms
+   
+    //dg1dt 
+    // (nr, nm) = (0, 0)
+    double dg1dtintlim = (3*(cinc - cotinc1sinc)*pow(a2,-2.5)*pow(c,-2)*pow(G,1.5)*pow(j2n,-2)*pow(mtot,1.5))/2.;
+    // (nr, nm) = (-1, 1)
+    dg1dtintlim += (15*m*(4*c2g1*c2g2*cinc + (3 + c2inc)*s2g1*s2g2)*pow(a1,-1)*pow(a2,-1.5)*pow(c,-2)*pow(e1n,2)*pow(G,1.5)*pow(j1n,-3)*pow(j2n,-3)*(-1 - j2n + 2*pow(j2n,2))*pow(1 + j2n,-1)*pow(mtot,0.5))/16.;
+    // (nr, nm) = (1.5, -0.5)
+    dg1dtintlim += (3*pow(a1,1.5)*pow(a2,-4)*pow(c,-2)*pow(e2n,2)*pow(G,1.5)*pow(j1n,-1)*(10*cotinc1sinc*s2g1*s2g2*pow(e1n,2) + 3*pow(j1n,2) + 9*c2inc*pow(j1n,2) + 6*c2g2*sincsq*pow(j1n,2) + 2*cinc*(15*cotinc1sinc - 9*cotinc1sinc*pow(j1n,2) + 40*cg1*cg2*sg1*sg2*pow(j1n,2) + c2g2*cotinc1sinc*(-5 + 3*pow(j1n,2))) + 5*c2g1*(-6*cinc*cotinc1sinc*pow(e1n,2) + 6*sincsq*pow(j1n,2) + c2g2*(2*cinc*cotinc1sinc*pow(e1n,2) + (3 + c2inc)*pow(j1n,2))))*pow(j2n,-5)*pow(m,-0.5)*pow(mtot,2))/16.;
+    de1dt += ((e1n)*v1) * dg1dtintlim;
+    dj1dt += 0.;
+
+    //dg2dt
+    // (nr, nm) = (3, -1)
+    double dg2dtintlim = (3*pow(a1,3)*pow(a2,-5.5)*pow(c,-2)*pow(G,1.5)*pow(j2n,-8)*(-((10*(1 + 3*c2inc)*(-7 + 3*pow(j1n,2)) + 12*c2g1*sincsq*(-49 + 17*pow(j1n,2)))*(-5 + pow(j2n,2))*pow(j2n,2)) - 16*cinc*s2g1*s2g2*(-49 + 17*pow(j1n,2))*(-24 + 4*pow(j2n,2) + pow(j2n,4)) - 2*c2g2*(20*sincsq*(-7 + 3*pow(j1n,2)) + 2*c2g1*(3 + c2inc)*(-49 + 17*pow(j1n,2)))*(-24 + 4*pow(j2n,2) + pow(j2n,4)))*pow(m,-1)*pow(mtot,2.5))/1024.;
+    // (nr, nm) = (-0.5, 1.5)
+    dg2dtintlim = (9*eta*pow(a1,-0.5)*pow(a2,-2)*pow(c,-2)*pow(G,1.5)*pow(j1n,-2)*pow(j2n,-6)*(80*(c2g1*c2g2*cinc + 2*cg1*cg2*(1 + cincsq)*sg1*sg2)*pow(e1n,2)*pow(j2n,3) + pow(1 + j2n,-2)*(c2g2*(10*c2g1*(3 + c2inc)*pow(e1n,2) + 4*sincsq*(5 - 3*pow(j1n,2)))*(-9 + j2n*(18*pow(j2n,2) + 9*(-2 + pow(j2n,3)) - 8*pow(j2n,4))) - 40*cinc*s2g1*s2g2*pow(e1n,2)*(9 + j2n*(18 - 18*pow(j2n,2) - 9*pow(j2n,3) + 8*pow(j2n,4))) - 4*(-30*c2g1*sincsq*pow(e1n,2) + (1 + 3*c2inc)*(-5 + 3*pow(j1n,2)))*(-5 + 3*pow(j2n,2))*pow(1 + j2n,2)))*pow(m,1.5))/256.;
+    de2dt += ((e2n)*v2) * dg2dtintlim;
+    dj2dt += 0.;
+
+    //dh1dt
+    // (nr, nm) = (0, 0)
+    double dh1dtintlim = (3*cscinc1sinc*pow(a2,-2.5)*pow(c,-2)*pow(G,1.5)*pow(j2n,-2)*pow(mtot,1.5))/2.;
+    // (nr, nm) = (1.5, -0.5)
+    dh1dtintlim += (3*cscinc1sinc*pow(a1,1.5)*pow(a2,-4)*pow(c,-2)*pow(e2n,2)*pow(G,1.5)*pow(j1n,-1)*(-5*s2g1*s2g2*pow(e1n,2) + (-3 + c2g2)*cinc*(5 - 5*c2g1*pow(e1n,2) - 3*pow(j1n,2)))*pow(j2n,-5)*pow(m,-0.5)*pow(mtot,2))/8.;
+    de1dt += ((e1n*cinc1)*v1 + (-e1n*cg1*sinc1)*n1) * dh1dtintlim;
+    dj1dt += ((j1n*cg1*sinc1)*u1 + (-j1n*sg1*sinc1)*v1) * dh1dtintlim;
+
+    //dh2dt
+    // no contribution from dominant cross terms
+
+    //dp1dt
+    // (nr, nm) = (1.5, -0.5)
+    double dp1dtintlim = (-15*j1n*(-4*c2g1*cinc*s2g2 + s2g1*(c2g2*(3 + c2inc) + 6*sincsq))*pow(a1,2.5)*pow(a2,-4)*pow(c,-2)*pow(e1n,2)*pow(e2n,2)*pow(G,1.5)*pow(j2n,-5)*pow(m,-0.5)*pow(mtot,2))/8.;
+     dadt += (dp1dtintlim + 2. * a1 * e1n * de1dtintlim) / sqr(j1n);
+
+    //dp2dt
+    // (nr, nm) = (3, -1)
+    double dp2dtintlim = (-3*pow(a1,3)*pow(a2,-4.5)*pow(c,-2)*pow(e2n,2)*pow(G,1.5)*(16*c2g2*cinc*s2g1*(49 - 17*pow(j1n,2)) + 4*s2g2*(10*sincsq*(-7 + 3*pow(j1n,2)) + c2g1*(3 + c2inc)*(-49 + 17*pow(j1n,2))))*pow(j2n,-6)*(-7 + pow(j2n,2))*pow(m,-1)*pow(mtot,2.5))/256.;
+    da2dt += (dp2dtintlim + 2. * a2 * e2n * de2dtintlim) / sqr(j2n);
 
     }
 
@@ -468,8 +536,8 @@ void set_parameters(int argc, char **argv, kozai_struct *kozai, double &t_end, d
 		{"quad"  ,0,  0, 'q'},
 		{"oct"   ,0,  0, 'o'},
 		{"peri"  ,0,  0, 'p'},
-        {"outerperi",0,0,'P'},
-        {"cross_lim",0,0,'X'},
+    {"outerperi",0,0,'P'},
+    {"cross_lim",0,0,'X'},
 		{"spinorbit"  ,0,  0, 's'},
 		{"spinspin"   ,0,  0, 'S'},
 		{"rad"   ,0,  0, 'r'},
@@ -531,10 +599,10 @@ void set_parameters(int argc, char **argv, kozai_struct *kozai, double &t_end, d
 		  kozai->set_octupole(true); break;
 		case 'p':
 		  kozai->set_pericenter(true); break;
-        case 'P':
-          kozai->set_outer_pericenter(true); break;
-        case 'X':
-          kozai->set_cross_lim(true); break;
+    case 'P':
+      kozai->set_outer_pericenter(true); break;
+    case 'X':
+      kozai->set_cross_lim(true); break;
 		case 's':
 		  kozai->set_spinorbit(true); break;
 		case 'S':
