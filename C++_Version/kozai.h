@@ -17,7 +17,7 @@ using namespace std;
 #include <gsl/gsl_integration.h>
 
 #define sqr(x) ((x)*(x))
-#define DIMENSION 20
+#define DIMENSION 14
 
 #define PRI(x) {for (int __pri__ = 0; __pri__ < x; __pri__++) cerr << " ";}
 #define PR(x)  cerr << #x << " = " << x << " "
@@ -61,7 +61,7 @@ const double PI=3.14159265359;
 class kozai_struct;
 
 int rhs(double t, const double y[], double f[], void *kozai_ptr);
-void set_parameters(int argc, char **argv, kozai_struct *kozai, double& t_min, double& t_step, bool& IGNORE_GSL_ERROR);
+void set_parameters(int argc, char **argv, kozai_struct *kozai, double& t_min, double& t_step, bool& IGNORE_GSL_ERROR,bool& PRINT_GSL);
 void print_state(double t_next, kozai_struct *kozai, ostream& stream);
 void print_header_and_initial_state(kozai_struct* kozai);
 double peters_t(kozai_struct *kozai);
@@ -91,14 +91,6 @@ class kozai_struct
 		double r1;
 		double r2;
 
-		//Spin information for inner binary
-		double chi1;
-		double chi2;
-		double theta1;
-		double theta2;
-		double phi1;
-		double phi2;
-
 		//Things to compute ahead of time...
 		double L1_no_a;
 		double L2;
@@ -112,10 +104,8 @@ class kozai_struct
 		bool quadrupole;
 		bool octupole;
 		bool pericenter;
-        bool outerpericenter;
-        bool crossterms;
-		bool spinorbit;
-		bool spinspin;
+    bool outerpericenter;
+    bool crossterms;
 		bool radiation;
 
 		//The initial configuration of the system in j,e,s space
@@ -124,8 +114,6 @@ class kozai_struct
 		vec j2_init;
 		vec e1_init;
 		vec e2_init;
-		vec s1_init;
-		vec s2_init;
 
 		double *y;
 
@@ -135,9 +123,8 @@ class kozai_struct
 		//Sloppy af constructor
 		kozai_struct(double ia1=365.11437, double ia2=2865.7776, double ie1=0.32229033, double ie2=0.35653592, double iinc=93.920405, 
 			  double ig1=199.31831, double ig2=237.15944, double im1=24.22645, double im2=14.999986, double im3=21.509239,
-			  double iOmega1=321.97666, double iOmega2=141.97666, double ir1=0, double ir2=0,  double ichi1=1, double ichi2=1,
-			  double itheta1=0, double itheta2=0, double iphi1=0, double iphi2=0,
-			  bool iquad=false, bool ioct=false, bool iperi=false, bool ioperi=false, bool icross=false, bool iso=false, bool iss=false, bool rad=false)
+			  double iOmega1=321.97666, double iOmega2=141.97666, double ir1=0, double ir2=0,
+			  bool iquad=false, bool ioct=false, bool iperi=false, bool ioperi=false, bool icross=false,bool rad=false)
 			{	
 				a1=ia1*AU;
 				a2=ia2*AU;
@@ -153,19 +140,11 @@ class kozai_struct
 				Omega2=iOmega2*DEG;
 				r1=ir1*RSUN;
 				r2=ir2*RSUN;
-				chi1=ichi1;
-				chi2=ichi2;
-				theta1=itheta1*DEG;
-				theta2=itheta2*DEG;
-				phi1=iphi1*DEG;
-				phi2=iphi2*DEG;
 				quadrupole=iquad;
 				octupole=ioct;
 				pericenter=iperi;
-                outerpericenter=ioperi;
-                crossterms=icross;
-				spinorbit=iso;
-				spinspin=iss;
+        outerpericenter=ioperi;
+        crossterms=icross;
 				radiation=rad;
 				y = new double[DIMENSION];
 			}
@@ -186,12 +165,6 @@ class kozai_struct
 			//If no radius specified, set to the Schwarzschild ISCO 
 			if(r1 == 0.) r1 = 2*1476.*m1/MSUN; 
 			if(r2 == 0.) r2 = 2*1476.*m2/MSUN;
-
-			//These can't be exactly 0
-			if(chi1 == 0.0) chi1 = SMALLNUMBER;
-			if(chi2 == 0.0) chi2 = SMALLNUMBER;
-			if(theta1 == 0.0) theta1 = SMALLNUMBER;
-			if(theta2 == 0.0) theta2 = SMALLNUMBER;
 
 			//Using the angular momenta, figure out what the individual
 			//inclinations are wrt the invariant plane
@@ -217,22 +190,9 @@ class kozai_struct
 					cos(g2)*sin(Omega2) + sin(g2)*cos(inc2)*cos(Omega2),
 					sin(g2)*sin(inc2));
 
-			//Also define the spin vectors (originally parallel to j1, then
-			//rotate down to the specified intial orientation)
-			s1_init =  m1*m1*(G/c)*chi1*j1_init / abs(j1_init);
-			s2_init = m2*m2*(G/c)*chi2*j1_init / abs(j1_init);
-
 			vec yhat = j1_init^e1_init;
 			yhat /= abs(yhat);
 			vec zhat = j1_init / abs(j1_init);
-
-			//first, rotate by theta about j1 x e1
-			s1_init = s1_init*cos(theta1) + (yhat^s1_init)*sin(theta1) + yhat*(yhat*s1_init)*(1-cos(theta1));
-			s2_init = s2_init*cos(theta2) + (yhat^s2_init)*sin(theta2) + yhat*(yhat*s2_init)*(1-cos(theta2));
-
-			//Then rotate about j1 by phi
-			s1_init = s1_init*cos(phi1) + (zhat^s1_init)*sin(phi1) + zhat*(zhat*s1_init)*(1-cos(phi1));
-			s2_init = s2_init*cos(phi2) + (zhat^s2_init)*sin(phi2) + zhat*(zhat*s2_init)*(1-cos(phi2));
 
 			//And set the components into the y vector (which will be passed to
 			//GSL)
@@ -241,11 +201,9 @@ class kozai_struct
 				y[i+3] = e1_init[i];
 				y[i+6] = j2_init[i];
 				y[i+9] = e2_init[i];
-				y[i+12] = s1_init[i];
-				y[i+15] = s2_init[i];
 			}
-			y[18] = a1;
-            y[19] = a2;
+			y[12] = a1;
+      y[13] = a2;
 		}
 
 		//The getters and setters for the class;
@@ -253,7 +211,7 @@ class kozai_struct
 		//
 		//The inner binary
 		void set_a1(double a1_i) {a1=a1_i;}
-		double get_a1() {return y[18];}
+		double get_a1() {return y[12];}
 
 		void set_ecc1(double e1_i) {e1=e1_i;}
 		double get_ecc1() {return abs(this->get_e1());}
@@ -287,7 +245,7 @@ class kozai_struct
 
 		//Outer Binary
 		void set_a2(double a2_i) {a2=a2_i;}
-		double get_a2() {return y[19];}
+		double get_a2() {return y[13];}
 
 		void set_ecc2(double e2_i) {e2=e2_i;}
 		double get_ecc2() {return abs(this->get_e2());}
@@ -336,67 +294,6 @@ class kozai_struct
 		void set_r2(double r2_i) {r2=r2_i*RSUN;}
 		double get_r2() {return r2;}
 
-		void set_chi1(double chi1_i) {chi1=chi1_i;}
-		double get_chi1() {return chi1;}
-
-		void set_chi2(double chi2_i) {chi2=chi2_i;}
-		double get_chi2() {return chi2;}
-
-		void set_theta1(double theta1_i) {theta1=theta1_i;}
-		double get_theta1() {
-			double dot = (this->get_j1()*this->get_s1()/(abs(this->get_j1())*abs(this->get_s1())));
-			return acos(min(max(dot,-1.0),1.0)); // careful with rounding errors if theta = 0
-		}
-
-		void set_theta2(double theta2_i) {theta2=theta2_i;}
-		double get_theta2() {
-			double dot = (this->get_j1()*this->get_s2()/(abs(this->get_j1())*abs(this->get_s2())));
-			return acos(min(max(dot,-1.0),1.0)); // careful with rounding errors if theta = 0
-		}
-
-		double get_Theta1() {
-			double dot = this->get_s1()[2]/abs(this->get_s1());
-			return acos(min(max(dot,-1.0),1.0)); // careful with rounding errors if theta = 0
-		}
-
-		double get_Theta2() {
-			double dot = this->get_s2()[2]/abs(this->get_s2());
-			return acos(min(max(dot,-1.0),1.0)); // careful with rounding errors if theta = 0
-		}
-
-		void set_phi1(double phi1_i) {phi1=phi1_i;}
-		double get_phi1() {
-			double dot = (this->get_e1()*this->get_s1()/(abs(this->get_e1())*abs(this->get_s1())));
-			return acos(min(max(dot,-1.0),1.0)); // careful with rounding errors if phi = 0
-		}
-
-		void set_phi2(double phi2_i) {phi2=phi2_i;}
-		double get_phi2() {
-			double dot = (this->get_e1()*this->get_s2()/(abs(this->get_e1())*abs(this->get_s2())));
-			return acos(min(max(dot,-1.0),1.0)); // careful with rounding errors if phi = 0
-		}
-
-		double get_deltaPhi(){
-			vec s1h = this->get_s1() / abs(this->get_s1());
-			vec s2h = this->get_s2() / abs(this->get_s2());
-			vec j1h = this->get_j1() / abs(this->get_j1());
-			vec first_proj = s1h-(s1h*j1h)*j1h;
-			vec secon_proj = s2h-(s2h*j1h)*j1h;
-			double dot = first_proj*secon_proj / (abs(first_proj)*abs(secon_proj));
-			if(abs(dot) < 1.0)
-				return acos(dot);
-			else if(dot >= 1.0)
-				return 0.;
-			else
-				return PI;
-		}
-
-		double get_s1s2(){
-			vec s1h = this->get_s1() / abs(this->get_s1());
-			vec s2h = this->get_s2() / abs(this->get_s2());
-			return acos(min(max(s1h*s2h,-1.0),1.0));
-		}
-
 		double collision() {
 			return (this->get_a1()*(1-this->get_ecc1()) < (this->get_r1() + this->get_r2()));
 		}
@@ -428,12 +325,6 @@ class kozai_struct
         void set_cross_lim(bool cross_i) {crossterms=cross_i;}
         bool get_cross_lim() {return crossterms;}
 
-		void set_spinorbit(bool spinorbit_i) {spinorbit=spinorbit_i;}
-		bool get_spinorbit() {return spinorbit;}
-
-		void set_spinspin(bool spinspin_i) {spinspin=spinspin_i;}
-		bool get_spinspin() {return spinspin;}
-
 		void set_radiation(bool radiation_i) {radiation=radiation_i;}
 		bool get_radiation() {return radiation;}
 
@@ -455,8 +346,6 @@ class kozai_struct
 		vec get_e1() {return vec(y[3],y[4],y[5]);}
 		vec get_j2() {return vec(y[6],y[7],y[8]);}
 		vec get_e2() {return vec(y[9],y[10],y[11]);}
-		vec get_s1() {return vec(y[12],y[13],y[14]);}
-		vec get_s2() {return vec(y[15],y[16],y[17]);}
 
 		//Return the pointer to y
 		double *get_y() {return y;}
