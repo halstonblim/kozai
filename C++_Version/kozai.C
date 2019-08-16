@@ -54,7 +54,6 @@ void print_state(double t_next, kozai_struct *kozai, ostream& stream = cerr){
     << kozai->get_a1()/AU << "  " 
     << kozai->get_a2()/AU << "  " 
     << kozai->get_ecc1() << "  "
-    << setprecision(ss)
     << kozai->get_ecc2() << "  " 
     << kozai->get_inc()/DEG << "  " 
     << kozai->get_inc1()/DEG << "  " 
@@ -324,9 +323,6 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
     double m = m1+m2;
     double eta = m1*m2/sqr(m);
     double mtot = m + m3;
-    double G1 = L1 * j1n;
-    double G2 = L2 * j2n;
-    double Gtot = abs(G1 + G2);
         
     // Define trig funcs wrt to inc, i1
     // Avoid evaluating angles; use vectors; Naoz et al (2013a) Appendix A
@@ -335,12 +331,6 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
     double sincsq  = sqr(sinc);
     double cincsq  = sqr(cinc);
     double c2inc   = 1 - 2*sqr(sinc);
-    double cinc1 = n1[2];
-    double sinc1 = sinc * G2 / Gtot;
-    double cg1sinc1    = (n2*v1) * G2 / Gtot;
-    double sg1sinc1    = (n2*u1) * G2 / Gtot;
-    double cotinc1sinc = cinc1 * Gtot / G2;
-    double cscinc1sinc = Gtot / G2;
 
     // Define trig functions wrt to g1, g2; Goes bad as sinc -> 0
     double cg1 = (n2*v1) / sinc;
@@ -359,16 +349,15 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
     de1dtcross += (15*e1n*j1n*(c2g2*(3 + c2inc)*s2g1 - 4*c2g1*cinc*s2g2 + 6*s2g1*sincsq)*pow(a1,1.5)*pow(a2,-4)*pow(c,-2)*pow(e2n,2)*pow(G,1.5)*pow(j2n,-5)*pow(m,-0.5)*pow(mtot,2))/16.;
     dp1dtcross += (-15*j1n*(-4*c2g1*cinc*s2g2 + s2g1*(c2g2*(3 + c2inc) + 6*sincsq))*pow(a1,2.5)*pow(a2,-4)*pow(c,-2)*pow(e1n,2)*pow(e2n,2)*pow(G,1.5)*pow(j2n,-5)*pow(m,-0.5)*pow(mtot,2))/8.;
     di1dtcross += (-3*sinc*pow(a1,1.5)*pow(a2,-4)*pow(c,-2)*pow(e2n,2)*pow(G,1.5)*pow(j1n,-1)*(-5*(-3 + c2g2)*cinc*s2g1*pow(e1n,2) + s2g2*(5 + 5*c2g1*pow(e1n,2) - 3*pow(j1n,2)))*pow(j2n,-5)*pow(m,-0.5)*pow(mtot,2))/8.;
-    dg1dtcross += (3*pow(a1,1.5)*pow(a2,-4)*pow(c,-2)*pow(e2n,2)*pow(G,1.5)*pow(j1n,-1)*(10*cotinc1sinc*s2g1*s2g2*pow(e1n,2) + 3*pow(j1n,2) + 9*c2inc*pow(j1n,2) + 6*c2g2*sincsq*pow(j1n,2) + 2*cinc*(15*cotinc1sinc - 9*cotinc1sinc*pow(j1n,2) + 10*s2g1*s2g2*pow(j1n,2) + c2g2*cotinc1sinc*(-5 + 3*pow(j1n,2))) + 5*c2g1*(-6*cinc*cotinc1sinc*pow(e1n,2) + 6*sincsq*pow(j1n,2) + c2g2*(2*cinc*cotinc1sinc*pow(e1n,2) + (3 + c2inc)*pow(j1n,2))))*pow(j2n,-5)*pow(m,-0.5)*pow(mtot,2))/16.;
-    dh1dtcross += (3*cscinc1sinc*pow(a1,1.5)*pow(a2,-4)*pow(c,-2)*pow(e2n,2)*pow(G,1.5)*pow(j1n,-1)*(-5*s2g1*s2g2*pow(e1n,2) + (-3 + c2g2)*cinc*(5 - 5*c2g1*pow(e1n,2) - 3*pow(j1n,2)))*pow(j2n,-5)*pow(m,-0.5)*pow(mtot,2))/8.;
+    dg1dtcross += (3*pow(a1,1.5)*pow(a2,-4)*pow(c,-2)*pow(e2n,2)*pow(G,1.5)*pow(j1n,-1)*pow(j2n,-5)*pow(m,-0.5)*pow(mtot,2)*(15 - 6*pow(j1n,2) + 10*cinc*s2g1*s2g2*(1 + pow(j1n,2)) + c2g2*(-5 - 5*c2inc + 6*pow(j1n,2)) + 5*c2g1*(-3 + 6*pow(j1n,2) + c2g2*(1 + c2inc + 2*pow(j1n,2))) + 30*c2inc*pow(sg1,2)))/16.;
+    dh1dtcross += (3*pow(a1,1.5)*pow(a2,-4)*pow(c,-2)*pow(e2n,2)*pow(G,1.5)*pow(j1n,-1)*(-5*s2g1*s2g2*pow(e1n,2) + (-3 + c2g2)*cinc*(5 - 5*c2g1*pow(e1n,2) - 3*pow(j1n,2)))*pow(j2n,-5)*pow(m,-0.5)*pow(mtot,2))/8.;
     // (nr, nm) = (0, 0)
-    dg1dtcross +=(3*(cinc - cotinc1sinc)*pow(a2,-2.5)*pow(c,-2)*pow(G,1.5)*pow(j2n,-2)*pow(mtot,1.5))/2.;
-    dh1dtcross += (3*cscinc1sinc*pow(a2,-2.5)*pow(c,-2)*pow(G,1.5)*pow(j2n,-2)*pow(mtot,1.5))/2.;
+    dh1dtcross += (3*pow(a2,-2.5)*pow(c,-2)*pow(G,1.5)*pow(j2n,-2)*pow(mtot,1.5))/2.;
     // (nr, nm) = (-1, 1)
-    dg1dtcross+= (-15*m*pow(a1,-1)*pow(a2,-1.5)*pow(c,-2)*pow(e1n,2)*pow(G,1.5)*pow(j1n,-3)*pow(j2n,-3)*(1 + j2n - 2*pow(j2n,2))*pow(1 + j2n,-1)*pow(mtot,0.5)*((3 + c2inc)*s2g1*s2g2 + 4*c2g2*cinc*pow(cg1,2) - 4*c2g2*cinc*pow(sg1,2)))/16.;
+    dg1dtcross+= (-15*m*(4*c2g1*c2g2*cinc + (3 + c2inc)*s2g1*s2g2)*pow(a1,-1)*pow(a2,-1.5)*pow(c,-2)*pow(e1n,2)*pow(G,1.5)*pow(j1n,-3)*pow(j2n,-3)*(1 + j2n - 2*pow(j2n,2))*pow(1 + j2n,-1)*pow(mtot,0.5))/16.;
 
-    de1dt += de1dtcross*u1 + (e1n*(dg1dtcross + dh1dtcross*cinc1))*v1 + (e1n*(di1dtcross*sg1-dh1dtcross*cg1sinc1))*n1;
-    dj1dt += (j1n*(-di1dtcross*sg1 + dh1dtcross*cg1sinc1))*u1 + (-j1n*(di1dtcross*cg1 + dh1dtcross*sg1sinc1))*v1 + ((-e1n/j1n)*de1dtcross)*n1;
+    de1dt += de1dtcross*u1 + (e1n*(dg1dtcross + dh1dtcross*cinc))*v1 + (e1n*(di1dtcross*sg1-dh1dtcross*cg1*sinc))*n1;
+    dj1dt += (j1n*(-di1dtcross*sg1 + dh1dtcross*cg1*sinc))*u1 + (-j1n*(di1dtcross*cg1 + dh1dtcross*sg1*sinc))*v1 + ((-e1n/j1n)*de1dtcross)*n1;
     dadt  += (dp1dtcross + 2. * a1 * e1n * de1dtcross) / sqr(j1n);
 
     // Outer binary
@@ -384,7 +373,6 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
     de2dt += de2dtcross*u2 + (e2n*(dg2dtcross))*v2;
     dj2dt += ((-e2n/j2n)*de2dtcross)*n2;
     da2dt += (dp2dtcross + 2. * a2 * e2n * de2dtcross) / sqr(j2n);
-
     }
 
   //Add gravitational-wave emission for the inner binary
