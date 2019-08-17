@@ -93,7 +93,7 @@ class kozai_struct
 
 		//Things to compute ahead of time...
 		double L1_no_a;
-		double L2;
+		double L2_no_a;
 		double mu1;
 		double mu2;
 		double m1m2;
@@ -157,7 +157,7 @@ class kozai_struct
 			mu1 = m1*m2 / (m1+m2);
 			mu2 = (m1+m2)*m3 / (m1+m2+m3);
 			L1_no_a = mu1*sqrt(G*(m1+m2));
-			L2 = mu2*sqrt(G*(m1+m2+m3)*a2);
+			L2_no_a = mu2*sqrt(G*(m1+m2+m3));
 			m1m2 = m1/m2;
 			m2m1 = m2/m1;
 			eta = mu1 / (m1+m2);
@@ -173,7 +173,7 @@ class kozai_struct
 			//towards to total system angular momentum (before radiation
 			//reaction)
 			double ia = L1_no_a*sqrt(a1*(1-sqr(e1)));
-			double oa = L2*sqrt(1-sqr(e2));
+			double oa = L2_no_a*sqrt(a2*(1-sqr(e2)));
 
 
 			double total_ang = sqrt(sqr(ia)+sqr(oa)+2*ia*oa*cos(inc));
@@ -203,7 +203,7 @@ class kozai_struct
 				y[i+9] = e2_init[i];
 			}
 			y[12] = a1;
-      y[13] = a2;
+		    y[13] = a2;
 		}
 
 		//The getters and setters for the class;
@@ -334,7 +334,7 @@ class kozai_struct
 		//due to radiation reaction
 		double get_L1() {return L1_no_a*sqrt(y[18]);}
 		double get_L1_no_a() {return L1_no_a;}
-		double get_L2() {return L2;}
+		double get_L2_no_a() {return L2_no_a;}
 		double get_mu1() {return mu1;}
 		double get_mu2() {return mu2;}
 		double get_m1m2() {return m1m2;}

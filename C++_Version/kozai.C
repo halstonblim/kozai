@@ -246,7 +246,7 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
   double m2 = kozai->get_m2();
   double m3 = kozai->get_m3();
   double L1 = kozai->get_L1_no_a()*sqrt(a1);
-  double L2 = kozai->get_L2();
+  double L2 = kozai->get_L2_no_a()*sqrt(a2);
 
   //pre-compute a bunch of the vectorial quantities that are used repeatedly
   double j1n = abs(j1);
