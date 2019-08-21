@@ -328,9 +328,17 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
     // Avoid evaluating angles; use vectors; Naoz et al (2013a) Appendix A
     double cinc    = n1*n2;
     double sinc    = sqrt(1.-sqr(cinc));
+    double s2inc   = 2. * sinc * cinc;
     double sincsq  = sqr(sinc);
     double cincsq  = sqr(cinc);
     double c2inc   = 1 - 2*sqr(sinc);
+    double cinc1   = n1[2];
+    double cinc2   = n2[2];
+    double sinc1   = sqrt(1.-sqr(cinc1));
+    double cscinc1 = 1 / sinc1;
+    double sinc2   = sqrt(1.-sqr(cinc2));
+    double cotinc1sinc = cinc1 * sinc / sinc1;
+    double cscinc1sinc = sinc / sinc1;
 
     // Define trig functions wrt to g1, g2; Goes bad as sinc -> 0
     double cg1 = (n2*v1) / sinc;
@@ -349,30 +357,28 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
     de1dtcross += (15*e1n*j1n*(c2g2*(3 + c2inc)*s2g1 - 4*c2g1*cinc*s2g2 + 6*s2g1*sincsq)*pow(a1,1.5)*pow(a2,-4)*pow(c,-2)*pow(e2n,2)*pow(G,1.5)*pow(j2n,-5)*pow(m,-0.5)*pow(mtot,2))/16.;
     dp1dtcross += (-15*j1n*(-4*c2g1*cinc*s2g2 + s2g1*(c2g2*(3 + c2inc) + 6*sincsq))*pow(a1,2.5)*pow(a2,-4)*pow(c,-2)*pow(e1n,2)*pow(e2n,2)*pow(G,1.5)*pow(j2n,-5)*pow(m,-0.5)*pow(mtot,2))/8.;
     di1dtcross += (-3*sinc*pow(a1,1.5)*pow(a2,-4)*pow(c,-2)*pow(e2n,2)*pow(G,1.5)*pow(j1n,-1)*(-5*(-3 + c2g2)*cinc*s2g1*pow(e1n,2) + s2g2*(5 + 5*c2g1*pow(e1n,2) - 3*pow(j1n,2)))*pow(j2n,-5)*pow(m,-0.5)*pow(mtot,2))/8.;
-    dg1dtcross += (3*pow(a1,1.5)*pow(a2,-4)*pow(c,-2)*pow(e2n,2)*pow(G,1.5)*pow(j1n,-1)*pow(j2n,-5)*pow(m,-0.5)*pow(mtot,2)*(15 - 6*pow(j1n,2) + 10*cinc*s2g1*s2g2*(1 + pow(j1n,2)) + c2g2*(-5 - 5*c2inc + 6*pow(j1n,2)) + 5*c2g1*(-3 + 6*pow(j1n,2) + c2g2*(1 + c2inc + 2*pow(j1n,2))) + 30*c2inc*pow(sg1,2)))/16.;
-    dh1dtcross += (3*pow(a1,1.5)*pow(a2,-4)*pow(c,-2)*pow(e2n,2)*pow(G,1.5)*pow(j1n,-1)*(-5*s2g1*s2g2*pow(e1n,2) + (-3 + c2g2)*cinc*(5 - 5*c2g1*pow(e1n,2) - 3*pow(j1n,2)))*pow(j2n,-5)*pow(m,-0.5)*pow(mtot,2))/8.;
+    dg1dtcross += (3*cscinc1*pow(a1,1.5)*pow(a2,-4)*pow(c,-2)*pow(e2n,2)*pow(G,1.5)*pow(j1n,-1)*(80*cinc1*s2g1*s2g2*sinc*pow(e1n,2) + 4*(-3 + 9*c2g2 + 5*c2g1*(9 + 5*c2g2) + (-3 + 5*c2g1)*(-3 + c2g2)*c2inc)*sinc1*pow(j1n,2) + 8*(-3 + 5*c2g1)*(-3 + c2g2)*cincsq*sinc1*pow(j1n,2) - 8*cinc1*s2inc*(c2g2*(5 - 5*c2g1*pow(e1n,2)) + 9*pow(j1n,2)) + 8*cinc*(80*cg1*cg2*sg1*sg2*sinc1*pow(j1n,2) + 6*cinc1*sinc*(5 - 5*c2g1*pow(e1n,2) + c2g2*pow(j1n,2))))*pow(j2n,-5)*pow(m,-0.5)*pow(mtot,2))/128.;
+    dh1dtcross += (3*cscinc1sinc*pow(a1,1.5)*pow(a2,-4)*pow(c,-2)*pow(e2n,2)*pow(G,1.5)*pow(j1n,-1)*(-5*s2g1*s2g2*pow(e1n,2) + (-3 + c2g2)*cinc*(5 - 5*c2g1*pow(e1n,2) - 3*pow(j1n,2)))*pow(j2n,-5)*pow(m,-0.5)*pow(mtot,2))/8.;
     // (nr, nm) = (0, 0)
-    dh1dtcross += (3*pow(a2,-2.5)*pow(c,-2)*pow(G,1.5)*pow(j2n,-2)*pow(mtot,1.5))/2.;
+    dh1dtcross += (3*cscinc1sinc*pow(a2,-2.5)*pow(c,-2)*pow(G,1.5)*pow(j2n,-2)*pow(mtot,1.5))/2.;
+    dg1dtcross += (3*(cinc - cotinc1sinc)*pow(a2,-2.5)*pow(c,-2)*pow(G,1.5)*pow(j2n,-2)*pow(mtot,1.5))/2.;
     // (nr, nm) = (-1, 1)
     dg1dtcross+= (-15*m*(4*c2g1*c2g2*cinc + (3 + c2inc)*s2g1*s2g2)*pow(a1,-1)*pow(a2,-1.5)*pow(c,-2)*pow(e1n,2)*pow(G,1.5)*pow(j1n,-3)*pow(j2n,-3)*(1 + j2n - 2*pow(j2n,2))*pow(1 + j2n,-1)*pow(mtot,0.5))/16.;
 
-    de1dt += de1dtcross*u1 + (e1n*(dg1dtcross + dh1dtcross*cinc))*v1 + (e1n*(di1dtcross*sg1-dh1dtcross*cg1*sinc))*n1;
-    dj1dt += (j1n*(-di1dtcross*sg1 + dh1dtcross*cg1*sinc))*u1 + (-j1n*(di1dtcross*cg1 + dh1dtcross*sg1*sinc))*v1 + ((-e1n/j1n)*de1dtcross)*n1;
+    de1dt += de1dtcross*u1 + (e1n*(dg1dtcross + dh1dtcross*cinc1))*v1 + (e1n*(di1dtcross*sg1-dh1dtcross*cg1*sinc1))*n1;
+    dj1dt += (j1n*(-di1dtcross*sg1 + dh1dtcross*cg1*sinc1))*u1 + (-j1n*(di1dtcross*cg1 + dh1dtcross*sg1*sinc1))*v1 + ((-e1n/j1n)*de1dtcross)*n1;
     dadt  += (dp1dtcross + 2. * a1 * e1n * de1dtcross) / sqr(j1n);
 
     // Outer binary
     double de2dtcross=0, dp2dtcross=0, dg2dtcross=0, dh2dtcross=0, di2dtcross=0;    
-    // (nr, nm) = (3, -1)
-    de2dtcross += (-3*e2n*pow(a1,3)*pow(a2,-5.5)*pow(c,-2)*pow(G,1.5)*(s2g2*(c2g1*(3 + c2inc)*(49 - 17*pow(j1n,2)) + 10*sincsq*(7 - 3*pow(j1n,2))) + 4*c2g2*cinc*s2g1*(-49 + 17*pow(j1n,2)))*pow(j2n,-8)*(120 - 89*pow(j2n,2) + 7*pow(j2n,4))*pow(m,-1)*pow(mtot,2.5))/512.;
-    dp2dtcross += (-3*pow(a1,3)*pow(a2,-4.5)*pow(c,-2)*pow(e2n,2)*pow(G,1.5)*(16*c2g2*cinc*s2g1*(49 - 17*pow(j1n,2)) + 4*s2g2*(10*sincsq*(-7 + 3*pow(j1n,2)) + c2g1*(3 + c2inc)*(-49 + 17*pow(j1n,2))))*pow(j2n,-6)*(-7 + pow(j2n,2))*pow(m,-1)*pow(mtot,2.5))/256.;
-    dg2dtcross += (3*pow(a1,3)*pow(a2,-5.5)*pow(c,-2)*pow(G,1.5)*pow(j2n,-8)*(-((10*(1 + 3*c2inc)*(-7 + 3*pow(j1n,2)) + 12*c2g1*sincsq*(-49 + 17*pow(j1n,2)))*(-5 + pow(j2n,2))*pow(j2n,2)) - 16*cinc*s2g1*s2g2*(-49 + 17*pow(j1n,2))*(-24 + 4*pow(j2n,2) + pow(j2n,4)) - 2*c2g2*(20*sincsq*(-7 + 3*pow(j1n,2)) + 2*c2g1*(3 + c2inc)*(-49 + 17*pow(j1n,2)))*(-24 + 4*pow(j2n,2) + pow(j2n,4)))*pow(m,-1)*pow(mtot,2.5))/1024.;
     // (nr, nm) = (-0.5, 1.5)
     dg2dtcross += (9*eta*pow(a1,-0.5)*pow(a2,-2)*pow(c,-2)*pow(G,1.5)*pow(j1n,-2)*pow(j2n,-6)*(80*(c2g1*c2g2*cinc + 2*cg1*cg2*(1 + cincsq)*sg1*sg2)*pow(e1n,2)*pow(j2n,3) + pow(1 + j2n,-2)*(c2g2*(10*c2g1*(3 + c2inc)*pow(e1n,2) + 4*sincsq*(5 - 3*pow(j1n,2)))*(-9 + j2n*(18*pow(j2n,2) + 9*(-2 + pow(j2n,3)) - 8*pow(j2n,4))) - 40*cinc*s2g1*s2g2*pow(e1n,2)*(9 + j2n*(18 - 18*pow(j2n,2) - 9*pow(j2n,3) + 8*pow(j2n,4))) - 4*(-30*c2g1*sincsq*pow(e1n,2) + (1 + 3*c2inc)*(-5 + 3*pow(j1n,2)))*(-5 + 3*pow(j2n,2))*pow(1 + j2n,2)))*pow(m,1.5))/256.;
     de2dtcross += (-45*e2n*eta*(-4*c2g1*cinc*s2g2 + s2g1*(c2g2*(3 + c2inc) + 12*sincsq))*pow(a1,-0.5)*pow(a2,-2)*pow(c,-2)*pow(e1n,2)*pow(G,1.5)*pow(j1n,-2)*pow(j2n,-3)*pow(m,1.5))/64.;
-
+    
     de2dt += de2dtcross*u2 + (e2n*(dg2dtcross))*v2;
     dj2dt += ((-e2n/j2n)*de2dtcross)*n2;
     da2dt += (dp2dtcross + 2. * a2 * e2n * de2dtcross) / sqr(j2n);
+
     }
 
   //Add gravitational-wave emission for the inner binary
