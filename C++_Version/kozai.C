@@ -51,13 +51,16 @@ void print_state(double t_next, kozai_struct *kozai, ostream& stream = cerr){
   streamsize ss = stream.precision();
 
   stream << setprecision(14) << (t_next/YEAR) << "  " 
-    << kozai->get_a1()/AU << "  " 
+    << setprecision(8) 
+    << kozai->get_a1()/AU << "  "
     << kozai->get_a2()/AU << "  " 
     << kozai->get_ecc1() << "  "
     << kozai->get_ecc2() << "  " 
+    << setprecision(14) 
     << kozai->get_inc()/DEG << "  " 
     << kozai->get_inc1()/DEG << "  " 
     << kozai->get_inc2()/DEG << "  " 
+    << setprecision(8) 
     << kozai->get_g1()/DEG << "  " 
     << kozai->get_g2()/DEG << endl;
 }
@@ -79,8 +82,8 @@ int main(int argc, char **argv){
   double max_e=0.;
   int status;
 
-  eps_abs *= 1e-2;
-  eps_rel *= 1e-2;
+  // eps_abs *= 1e-6;
+  // eps_rel *= 1e-6;
 
   //First, initialize the Kozai structure
   kozai_struct *kozai = new kozai_struct;
@@ -333,10 +336,10 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
     double cincsq  = sqr(cinc);
     double c2inc   = 1 - 2*sqr(sinc);
     double cinc1   = n1[2];
-    double cinc2   = n2[2];
+    // double cinc2   = n2[2];
     double sinc1   = sqrt(1.-sqr(cinc1));
     double cscinc1 = 1 / sinc1;
-    double sinc2   = sqrt(1.-sqr(cinc2));
+    // double sinc2   = sqrt(1.-sqr(cinc2));
     double cotinc1sinc = cinc1 * sinc / sinc1;
     double cscinc1sinc = sinc / sinc1;
 
@@ -369,15 +372,22 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
     dj1dt += (j1n*(-di1dtcross*sg1 + dh1dtcross*cg1*sinc1))*u1 + (-j1n*(di1dtcross*cg1 + dh1dtcross*sg1*sinc1))*v1 + ((-e1n/j1n)*de1dtcross)*n1;
     dadt  += (dp1dtcross + 2. * a1 * e1n * de1dtcross) / sqr(j1n);
 
-    // Outer binary
-    double de2dtcross=0, dp2dtcross=0, dg2dtcross=0, dh2dtcross=0, di2dtcross=0;    
-    // (nr, nm) = (-0.5, 1.5)
-    dg2dtcross += (9*eta*pow(a1,-0.5)*pow(a2,-2)*pow(c,-2)*pow(G,1.5)*pow(j1n,-2)*pow(j2n,-6)*(80*(c2g1*c2g2*cinc + 2*cg1*cg2*(1 + cincsq)*sg1*sg2)*pow(e1n,2)*pow(j2n,3) + pow(1 + j2n,-2)*(c2g2*(10*c2g1*(3 + c2inc)*pow(e1n,2) + 4*sincsq*(5 - 3*pow(j1n,2)))*(-9 + j2n*(18*pow(j2n,2) + 9*(-2 + pow(j2n,3)) - 8*pow(j2n,4))) - 40*cinc*s2g1*s2g2*pow(e1n,2)*(9 + j2n*(18 - 18*pow(j2n,2) - 9*pow(j2n,3) + 8*pow(j2n,4))) - 4*(-30*c2g1*sincsq*pow(e1n,2) + (1 + 3*c2inc)*(-5 + 3*pow(j1n,2)))*(-5 + 3*pow(j2n,2))*pow(1 + j2n,2)))*pow(m,1.5))/256.;
-    de2dtcross += (-45*e2n*eta*(-4*c2g1*cinc*s2g2 + s2g1*(c2g2*(3 + c2inc) + 12*sincsq))*pow(a1,-0.5)*pow(a2,-2)*pow(c,-2)*pow(e1n,2)*pow(G,1.5)*pow(j1n,-2)*pow(j2n,-3)*pow(m,1.5))/64.;
+    // Outer binary terms are numerically insignificant
+    // double de2dtcross=0, dp2dtcross=0, dg2dtcross=0, dh2dtcross=0, di2dtcross=0;    
+    // // (nr, nm) = (2.0, -4.5)
+    // de2dtcross += (3*eta*pow(a1,2)*pow(a2,-4.5)*pow(c,-2)*pow(e2n,-1)*pow(G,1.5)*(20*c2g2*cinc*s2g1*pow(e1n,2) - s2g2*(5*c2g1*(3 + c2inc)*pow(e1n,2) + 2*sincsq*(5 - 3*pow(j1n,2))))*pow(j2n,-6)*(25 - 7*pow(e2n,2)*(-2 + pow(j2n,2)) - 37*pow(j2n,2) + 12*pow(j2n,4))*pow(mtot,1.5))/128.;
+    // di2dtcross += (3*eta*sinc*pow(a1,2)*pow(a2,-4.5)*pow(c,-2)*pow(G,1.5)*(5*(5 + 2*c2g2)*s2g1*pow(e1n,2) - 2*cinc*s2g2*(-5 + 5*c2g1*pow(e1n,2) + 3*pow(j1n,2)))*pow(j2n,-6)*(-1 + pow(j2n,2))*pow(mtot,1.5))/8.;
+    // dp2dtcross += (-3*eta*pow(a1,2)*pow(a2,-3.5)*pow(c,-2)*pow(G,1.5)*(20*c2g2*cinc*s2g1*pow(e1n,2) - s2g2*(5*c2g1*(3 + c2inc)*pow(e1n,2) + 2*sincsq*(5 - 3*pow(j1n,2))))*pow(j2n,-4)*(-1 + pow(j2n,2))*pow(mtot,1.5))/4.;
+    // dg2dtcross += (3*eta*pow(a1,2)*pow(a2,-4.5)*pow(c,-2)*pow(e2n,-2)*pow(G,1.5)*pow(j2n,-6)*pow(mtot,1.5)*(-16*cinc*cotinc2sinc*pow(cg1,2)*pow(cg2,2)*pow(e2n,2)*pow(j1n,2)*(-20 + pow(j2n,2)) - (-30*c2g1*sincsq*pow(e1n,2) + (1 + 3*c2inc)*(-5 + 3*pow(j1n,2)))*(-5 + pow(j2n,2))*(-4 + pow(j2n,2)) - 40*cotinc2sinc*s2g1*s2g2*pow(e1n,2)*pow(e2n,2)*(12 + pow(j2n,2)) - 40*cinc*s2g1*s2g2*pow(e1n,2)*(-44 + 40*pow(j2n,2) + pow(j2n,4)) - c2g2*(10*c2g1*(3 + c2inc)*pow(e1n,2) + 4*sincsq*(5 - 3*pow(j1n,2)))*(-44 + 40*pow(j2n,2) + pow(j2n,4)) + 80*cinc*s2g1*s2g2*pow(e1n,2)*(-32 + 33*pow(j2n,2) + 2*pow(j2n,4)) + 16*(-5 + 3*pow(j1n,2))*(-10 - 5*pow(j2n,2) + 3*pow(j2n,4)) + 8*cincsq*pow(cg1,2)*pow(cg2,2)*pow(j1n,2)*(34 - 81*pow(j2n,2) + 5*pow(j2n,4)) - 8*pow(cg1,2)*pow(cg2,2)*(-5 + 4*pow(j1n,2))*(-94 + 51*pow(j2n,2) + 13*pow(j2n,4)) + 16*cinc*cotinc2sinc*pow(cg2,2)*pow(e2n,2)*(-5 + 4*pow(j1n,2))*(-20 + pow(j2n,2))*pow(sg1,2) - 8*cincsq*pow(cg2,2)*(-5 + 4*pow(j1n,2))*(34 - 81*pow(j2n,2) + 5*pow(j2n,4))*pow(sg1,2) + 8*pow(cg2,2)*pow(j1n,2)*(-94 + 51*pow(j2n,2) + 13*pow(j2n,4))*pow(sg1,2) - 16*cinc*cotinc2sinc*pow(cg1,2)*pow(e2n,2)*pow(j1n,2)*(4 + 3*pow(j2n,2))*pow(sg2,2) - 8*pow(cg1,2)*(-5 + 4*pow(j1n,2))*(34 - 81*pow(j2n,2) + 5*pow(j2n,4))*pow(sg2,2) + 8*cincsq*pow(cg1,2)*pow(j1n,2)*(-94 + 51*pow(j2n,2) + 13*pow(j2n,4))*pow(sg2,2) + 16*cinc*cotinc2sinc*pow(e2n,2)*(-5 + 4*pow(j1n,2))*(4 + 3*pow(j2n,2))*pow(sg1,2)*pow(sg2,2) + 8*pow(j1n,2)*(34 - 81*pow(j2n,2) + 5*pow(j2n,4))*pow(sg1,2)*pow(sg2,2) - 8*cincsq*(-5 + 4*pow(j1n,2))*(-94 + 51*pow(j2n,2) + 13*pow(j2n,4))*pow(sg1,2)*pow(sg2,2) + 4*(2*(-5 + 3*pow(j1n,2))*(122 - 137*pow(j2n,2) + 27*pow(j2n,4)) + 40*cg1*cg2*sg1*sg2*pow(e1n,2)*(cotinc2sinc*pow(e2n,2)*(20 - 7*pow(j2n,2)) + 3*cinc*(6 - 14*pow(j2n,2) + 5*pow(j2n,4))) + pow(sg1,2)*(pow(cg2,2)*(cinc*(-5 + 4*pow(j1n,2))*(4*cotinc2sinc*pow(e2n,2)*(8 + 11*pow(j2n,2)) + cinc*(-330 + 327*pow(j2n,2) - 51*pow(j2n,4))) + 3*pow(j1n,2)*(134 - 165*pow(j2n,2) + 37*pow(j2n,4))) + (3*pow(j1n,2)*(110 - 109*pow(j2n,2) + 17*pow(j2n,4)) + cinc*(-5 + 4*pow(j1n,2))*(4*cotinc2sinc*pow(e2n,2)*(-32 + 25*pow(j2n,2)) - 3*cinc*(134 - 165*pow(j2n,2) + 37*pow(j2n,4))))*pow(sg2,2)) + pow(cg1,2)*(pow(cg2,2)*(-3*(-5 + 4*pow(j1n,2))*(134 - 165*pow(j2n,2) + 37*pow(j2n,4)) + cinc*pow(j1n,2)*(-4*cotinc2sinc*pow(e2n,2)*(8 + 11*pow(j2n,2)) + cinc*(330 - 327*pow(j2n,2) + 51*pow(j2n,4)))) + (-3*(-5 + 4*pow(j1n,2))*(110 - 109*pow(j2n,2) + 17*pow(j2n,4)) + cinc*pow(j1n,2)*(4*cotinc2sinc*pow(e2n,2)*(32 - 25*pow(j2n,2)) + 3*cinc*(134 - 165*pow(j2n,2) + 37*pow(j2n,4))))*pow(sg2,2)))))/256.;
+    // dh2dtcross += (3*eta*cscinc2sinc*pow(a1,2)*pow(a2,-4.5)*pow(c,-2)*pow(G,1.5)*(10*s2g1*s2g2*pow(e1n,2) + (-5 + 2*c2g2)*cinc*(-5 + 5*c2g1*pow(e1n,2) + 3*pow(j1n,2)))*pow(j2n,-6)*(-1 + pow(j2n,2))*pow(mtot,1.5))/8.;
+
+    // // (nr, nm) = (-0.5, 1.5)
+    // dg2dtcross += (45*eta*(c2g1*c2g2*cinc + 2*cg1*cg2*(1 + cincsq)*sg1*sg2)*pow(a1,-0.5)*pow(a2,-2)*pow(c,-2)*pow(e1n,2)*pow(G,1.5)*pow(j1n,-2)*pow(j2n,-3)*pow(m,1.5))/16.;
+    // de2dtcross += (-45*e2n*eta*(-4*c2g1*cinc*s2g2 + s2g1*(c2g2*(3 + c2inc) + 12*sincsq))*pow(a1,-0.5)*pow(a2,-2)*pow(c,-2)*pow(e1n,2)*pow(G,1.5)*pow(j1n,-2)*pow(j2n,-3)*pow(m,1.5))/64.;
     
-    de2dt += de2dtcross*u2 + (e2n*(dg2dtcross))*v2;
-    dj2dt += ((-e2n/j2n)*de2dtcross)*n2;
-    da2dt += (dp2dtcross + 2. * a2 * e2n * de2dtcross) / sqr(j2n);
+    // de2dt += de2dtcross*u2 + (e2n*(dg2dtcross))*v2;
+    // dj2dt += ((-e2n/j2n)*de2dtcross)*n2;
+    // da2dt += (dp2dtcross + 2. * a2 * e2n * de2dtcross) / sqr(j2n);
 
     }
 
