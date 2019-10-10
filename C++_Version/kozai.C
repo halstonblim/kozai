@@ -37,8 +37,6 @@ Flags:\n\
   --oct        Include octupole Terms\n\
   --peri       Include inner pericenter precession (1pN) terms\n\
   --outerperi  Include outer pericenter precession (1pN) terms\n\
-  --cross_lim  Include 1pN-quadrupole cross terms\n\
-  --rad        Include gravitational-wave emission (2.5pN)\n\
   --ignore_gsl Ignore errors from GSL (i.e. when a binary merges, the inner\n\
                binary can decouple from the outer s.t. the optimal timestep\n\
                for the inner is beyond machine-tolerance away from the outer)\n\
@@ -370,11 +368,11 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
     dg1dtcross+= (-15*m*(4*c2g1*c2g2*cinc + (3 + c2inc)*s2g1*s2g2)*pow(a1,-1)*pow(a2,-1.5)*pow(c,-2)*pow(e1n,2)*pow(G,1.5)*pow(j1n,-3)*pow(j2n,-3)*(1 + j2n - 2*pow(j2n,2))*pow(1 + j2n,-1)*pow(mtot,0.5))/16.;
 
     // (nr, nm) = (1/2, 1/2)
-    de1dtcross += (3*j1n*(-11 + j1n*(-22 + (-23 + 12*eta)*j1n))*m3*s2g1*sincsq*pow(a1,0.5)*pow(a2,-3)*pow(c,-2)*pow(e1n,-3)*pow(G,1.5)*pow(-1 + j1n,2)*pow(j2n,-3)*pow(m,0.5))/8.;
-    dp1dtcross += (33*j1n*m3*s2g1*sincsq*pow(a1,1.5)*pow(a2,-3)*pow(c,-2)*pow(e1n,2)*pow(G,1.5)*pow(j2n,-3)*pow(m,0.5))/4.;
-    di1dtcross += (33*cg1*cinc*m3*sg1*sinc*pow(a1,0.5)*pow(a2,-3)*pow(c,-2)*pow(e1n,2)*pow(G,1.5)*pow(j1n,-1)*pow(j2n,-3)*pow(m,0.5))/4.;
-    dg1dtcross += (m3*pow(a1,0.5)*pow(a2,-3)*pow(c,-2)*pow(e1n,-4)*pow(G,1.5)*pow(-1 + j1n,2)*pow(j1n,-1)*pow(j2n,-3)*pow(m,0.5)*(3*c2g1*(-3 + c2inc)*(17 - 6*eta + j1n*(34 + 6*eta*(-2 + j1n) + 5*j1n))*pow(j1n,2) + 6*cotinc1*s2inc*(-11 + 11*c2g1*pow(e1n,2) + (5 - 4*eta)*pow(j1n,2))*pow(1 + j1n,2) + (-1 + 3*c2inc)*(-11 + 10*eta)*pow(j1n + pow(j1n,2),2) + 6*cincsq*(c2g1*(17 - 6*eta + j1n*(34 + 6*eta*(-2 + j1n) + 5*j1n))*pow(j1n,2) + (-11 + 10*eta)*pow(j1n + pow(j1n,2),2))))/32.;
-    dh1dtcross += (3*cscinc1*m3*s2inc*pow(a1,0.5)*pow(a2,-3)*pow(c,-2)*pow(G,1.5)*pow(j1n,-1)*(11 - 11*c2g1*pow(e1n,2) + (-5 + 4*eta)*pow(j1n,2))*pow(j2n,-3)*pow(m,0.5))/16.;
+    // de1dtcross += (3*j1n*(-11 + j1n*(-22 + (-23 + 12*eta)*j1n))*m3*s2g1*sincsq*pow(a1,0.5)*pow(a2,-3)*pow(c,-2)*pow(e1n,-3)*pow(G,1.5)*pow(-1 + j1n,2)*pow(j2n,-3)*pow(m,0.5))/8.;
+    // dp1dtcross += (33*j1n*m3*s2g1*sincsq*pow(a1,1.5)*pow(a2,-3)*pow(c,-2)*pow(e1n,2)*pow(G,1.5)*pow(j2n,-3)*pow(m,0.5))/4.;
+    // di1dtcross += (33*cg1*cinc*m3*sg1*sinc*pow(a1,0.5)*pow(a2,-3)*pow(c,-2)*pow(e1n,2)*pow(G,1.5)*pow(j1n,-1)*pow(j2n,-3)*pow(m,0.5))/4.;
+    // dg1dtcross += (m3*pow(a1,0.5)*pow(a2,-3)*pow(c,-2)*pow(e1n,-4)*pow(G,1.5)*pow(-1 + j1n,2)*pow(j1n,-1)*pow(j2n,-3)*pow(m,0.5)*(3*c2g1*(-3 + c2inc)*(17 - 6*eta + j1n*(34 + 6*eta*(-2 + j1n) + 5*j1n))*pow(j1n,2) + 6*cotinc1*s2inc*(-11 + 11*c2g1*pow(e1n,2) + (5 - 4*eta)*pow(j1n,2))*pow(1 + j1n,2) + (-1 + 3*c2inc)*(-11 + 10*eta)*pow(j1n + pow(j1n,2),2) + 6*cincsq*(c2g1*(17 - 6*eta + j1n*(34 + 6*eta*(-2 + j1n) + 5*j1n))*pow(j1n,2) + (-11 + 10*eta)*pow(j1n + pow(j1n,2),2))))/32.;
+    // dh1dtcross += (3*cscinc1*m3*s2inc*pow(a1,0.5)*pow(a2,-3)*pow(c,-2)*pow(G,1.5)*pow(j1n,-1)*(11 - 11*c2g1*pow(e1n,2) + (-5 + 4*eta)*pow(j1n,2))*pow(j2n,-3)*pow(m,0.5))/16.;
 
     de1dt += de1dtcross*u1 + (e1n*(dg1dtcross + dh1dtcross*cinc1))*v1 + (e1n*(di1dtcross*sg1-dh1dtcross*cg1*sinc1))*n1;
     dj1dt += (j1n*(-di1dtcross*sg1 + dh1dtcross*cg1*sinc1))*u1 + (-j1n*(di1dtcross*cg1 + dh1dtcross*sg1*sinc1))*v1 + ((-e1n/j1n)*de1dtcross)*n1;
