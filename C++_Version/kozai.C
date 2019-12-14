@@ -60,7 +60,9 @@ void print_state(double t_next, kozai_struct *kozai, ostream& stream = cerr){
     << kozai->get_inc2()/DEG << "  " 
     << setprecision(8) 
     << kozai->get_g1()/DEG << "  " 
-    << kozai->get_g2()/DEG << endl;
+    << kozai->get_g2()/DEG << "  "
+    << kozai->get_Omega1()/DEG << "  "
+    << kozai->get_Omega2()/DEG << endl;
 }
 
 int main(int argc, char **argv){
@@ -120,8 +122,7 @@ int main(int argc, char **argv){
     //Then integrate the system forward for this timestep
     while (t < t_next){
       status = gsl_odeiv2_evolve_apply (evolve_ptr, control_ptr, step_ptr,
-                                    &my_system, &t, t_next, &h, kozai->get_y());
-
+                                   &my_system, &t, t_next, &h, kozai->get_y());
 
       //Check for collisions
       if(kozai->collision()){
@@ -152,7 +153,6 @@ int main(int argc, char **argv){
         cout << "GSL_ERROR: (time, status) = " << t / YEAR << "," << gsl_strerror(status) << endl;
         print_state(t,kozai);
       }
-
       //check for some type of failure/NaN
       if ((status != GSL_SUCCESS && !IGNORE_GSL_ERRORS) || isnan(kozai->get_ecc1()) || kozai->get_ecc1() >= 1.){
         failure = true;
@@ -163,6 +163,13 @@ int main(int argc, char **argv){
       //timescale)
       if (output_every_nsteps && step % delta_output == 0)
         print_state(t,kozai);
+        /*
+        cout << "t = " << t/YEAR << endl;
+        for(int z = 0;z <= 12; z++) cout << kozai->get_y()[z] << " ";
+        cout << endl;
+        for(int z = 0;z <= 12; z++) cout << evolve_ptr->yerr[z] << " " ;
+        cout << endl << endl;
+        */
       step += 1;
     }
 
@@ -198,7 +205,6 @@ int main(int argc, char **argv){
 }
 
 void print_header_and_initial_state(kozai_struct* kozai){
-
   cout << "Triple setup:\n"  
     << "  m1 = " << kozai->get_m1()/MSUN << endl
     << "  m2 = " << kozai->get_m2()/MSUN << endl
@@ -219,14 +225,14 @@ void print_header_and_initial_state(kozai_struct* kozai){
   
   //Print the header with units and column names, and the initial state of the
   //system
-  cerr << "#1:t[yr]  #2:a1[AU]  #3:a2[AU] #4:e1  #5:e2  #6:inc[deg] #7:i1  #8:i2  #9:g1  #10:g2" << endl;
+  // cerr << "#1:t[yr]  #2:a1[AU]  #3:a2[AU] #4:e1  #5:e2  #6:inc[deg] #7:i1  #8:i2  #9:g1  #10:g2" << endl;
+  cerr << "#1:t[yr]  #2:a1[AU]  #3:a2[AU] #4:e1  #5:e2  #6:inc[deg] #7:i1  #8:i2  #9:g1  #10:g2  #11:h1  #12:h2" << endl;
 }
 
 
 int rhs(double t, const double y[], double f[], void *kozai_ptr){
 
   kozai_struct *kozai = (kozai_struct *) kozai_ptr;
-
   //First, convert the y array into vectors
   //
   //Note: you can't use the vectors in the kozai structure; for adaptive
@@ -239,7 +245,7 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
 
   //extract semi-major axes, masses and angular momenta
   double a1 = y[12];
-  double a2 = y[13];
+  double a2 = kozai->get_a2();
   double m1 = kozai->get_m1();
   double m2 = kozai->get_m2();
   double m3 = kozai->get_m3();
@@ -272,8 +278,8 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
   //Compute the (local) quadrupole timescale
   double tsec = (sqrt((m1+m2)/(G*pow(a1,3.)))*pow(a2,3.)*pow(1.-sqr(e2n),1.5) /m3);
 
-  vec dj1dt, de1dt=0., dj2dt, de2dt=0., ds1dt, ds2dt;
-  double dadt  = 0, da2dt = 0.;
+  vec dj1dt=0., de1dt=0., dj2dt=0., de2dt=0.;
+  double dadt  = 0;
 
   //Add the quadrupole-order secular evolution equations
   if(kozai->get_quadrupole()){
@@ -349,23 +355,28 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
     double c2g2 = 1 - 2*sqr(sg2);
     double s2g2 = 2 * sg2 * cg2;
 
+    double cinc2 = n2[2];
+    double sinc2 = sqrt(1.-sqr(cinc2));
     // 1PN-quadrupole cross terms; Lim Rodriguez (2019)
     // Inner binary
     double de1dtcross=0, dp1dtcross=0, dg1dtcross=0, dh1dtcross=0, di1dtcross=0;    
+     
+    // (nr, nm) = (1.5, -0.5) 
     
-    // (nr, nm) = (1.5, -0.5)
-    de1dtcross += (15*e1n*j1n*(c2g2*(3 + c2inc)*s2g1 - 4*c2g1*cinc*s2g2 + 6*s2g1*sincsq)*pow(a1,1.5)*pow(a2,-4)*pow(c,-2)*pow(e2n,2)*pow(G,1.5)*pow(j2n,-5)*pow(m,-0.5)*pow(mtot,2))/16.;
-    dp1dtcross += (-15*j1n*(-4*c2g1*cinc*s2g2 + s2g1*(c2g2*(3 + c2inc) + 6*sincsq))*pow(a1,2.5)*pow(a2,-4)*pow(c,-2)*pow(e1n,2)*pow(e2n,2)*pow(G,1.5)*pow(j2n,-5)*pow(m,-0.5)*pow(mtot,2))/8.;
-    di1dtcross += (-3*sinc*pow(a1,1.5)*pow(a2,-4)*pow(c,-2)*pow(e2n,2)*pow(G,1.5)*pow(j1n,-1)*(-5*(-3 + c2g2)*cinc*s2g1*pow(e1n,2) + s2g2*(5 + 5*c2g1*pow(e1n,2) - 3*pow(j1n,2)))*pow(j2n,-5)*pow(m,-0.5)*pow(mtot,2))/8.;
-    dg1dtcross += (3*cscinc1*pow(a1,1.5)*pow(a2,-4)*pow(c,-2)*pow(e2n,2)*pow(G,1.5)*pow(j1n,-1)*(80*cinc1*s2g1*s2g2*sinc*pow(e1n,2) + 4*(-3 + 9*c2g2 + 5*c2g1*(9 + 5*c2g2) + (-3 + 5*c2g1)*(-3 + c2g2)*c2inc)*sinc1*pow(j1n,2) + 8*(-3 + 5*c2g1)*(-3 + c2g2)*cincsq*sinc1*pow(j1n,2) - 8*cinc1*s2inc*(c2g2*(5 - 5*c2g1*pow(e1n,2)) + 9*pow(j1n,2)) + 8*cinc*(80*cg1*cg2*sg1*sg2*sinc1*pow(j1n,2) + 6*cinc1*sinc*(5 - 5*c2g1*pow(e1n,2) + c2g2*pow(j1n,2))))*pow(j2n,-5)*pow(m,-0.5)*pow(mtot,2))/128.;
-    dh1dtcross += (3*cscinc1sinc*pow(a1,1.5)*pow(a2,-4)*pow(c,-2)*pow(e2n,2)*pow(G,1.5)*pow(j1n,-1)*(-5*s2g1*s2g2*pow(e1n,2) + (-3 + c2g2)*cinc*(5 - 5*c2g1*pow(e1n,2) - 3*pow(j1n,2)))*pow(j2n,-5)*pow(m,-0.5)*pow(mtot,2))/8.;
+    double factor = pow(a1,1.5)*pow(a2,-4)*pow(c,-2)*pow(G,1.5)*pow(j2n,-5)*pow(m,-0.5)*pow(mtot,2);
+    de1dtcross += factor * (-15*e1n*j1n*(8*c2g1*cinc*s2g2 - 2*s2g1*(c2g2*(3 + c2inc) + 6*sincsq))*pow(e2n,2))/32.;
+    dp1dtcross += factor * (-15*a1*j1n*(-4*c2g1*cinc*s2g2 + s2g1*(c2g2*(3 + c2inc) + 6*sincsq))*pow(e1n,2)*pow(e2n,2))/8.;
+    di1dtcross += factor * (-3*sinc*pow(e2n,2)*pow(j1n,-1)*(-5*(-3 + c2g2)*cinc*s2g1*pow(e1n,2) + s2g2*(5 + 5*c2g1*pow(e1n,2) - 3*pow(j1n,2))))/8.;
+    dg1dtcross += factor * (-3*pow(j1n,-1)*(10*cotinc1sinc*s2g1*s2g2*pow(e1n,2)*(-16 + 3*pow(j2n,2)) + 20*cinc*s2g1*s2g2*pow(j1n,2)*(-16 + 3*pow(j2n,2)) - cotinc1*s2inc*(5 - 5*c2g1*pow(e1n,2) - 3*pow(j1n,2))*(4 - 10*pow(j2n,2) + c2g2*(-16 + 3*pow(j2n,2))) + (-3 + 5*c2g1)*c2inc*pow(j1n,2)*(4 - 10*pow(j2n,2) + c2g2*(-16 + 3*pow(j2n,2))) + (1 + 5*c2g1)*pow(j1n,2)*(-4 + 10*pow(j2n,2) + c2g2*(-48 + 9*pow(j2n,2)))))/64.;
+    dh1dtcross += factor * (3*cscinc1*sinc*pow(e2n,2)*pow(j1n,-1)*(-5*s2g1*s2g2*pow(e1n,2) + (-3 + c2g2)*cinc*(5 - 5*c2g1*pow(e1n,2) - 3*pow(j1n,2)))*pow(j2n,-5))/8.;
     
     // (nr, nm) = (0, 0)
     dh1dtcross += (3*cscinc1sinc*pow(a2,-2.5)*pow(c,-2)*pow(G,1.5)*pow(j2n,-2)*pow(mtot,1.5))/2.;
     dg1dtcross += (3*(cinc - cotinc1sinc)*pow(a2,-2.5)*pow(c,-2)*pow(G,1.5)*pow(j2n,-2)*pow(mtot,1.5))/2.;
-    
+     
     // (nr, nm) = (-1, 1)
     dg1dtcross+= (-15*m*(4*c2g1*c2g2*cinc + (3 + c2inc)*s2g1*s2g2)*pow(a1,-1)*pow(a2,-1.5)*pow(c,-2)*pow(e1n,2)*pow(G,1.5)*pow(j1n,-3)*pow(j2n,-3)*(1 + j2n - 2*pow(j2n,2))*pow(1 + j2n,-1)*pow(mtot,0.5))/16.;
+    
 
     // (nr, nm) = (1/2, 1/2)
     // de1dtcross += (3*j1n*(-11 + j1n*(-22 + (-23 + 12*eta)*j1n))*m3*s2g1*sincsq*pow(a1,0.5)*pow(a2,-3)*pow(c,-2)*pow(e1n,-3)*pow(G,1.5)*pow(-1 + j1n,2)*pow(j2n,-3)*pow(m,0.5))/8.;
@@ -376,6 +387,8 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
 
     de1dt += de1dtcross*u1 + (e1n*(dg1dtcross + dh1dtcross*cinc1))*v1 + (e1n*(di1dtcross*sg1-dh1dtcross*cg1*sinc1))*n1;
     dj1dt += (j1n*(-di1dtcross*sg1 + dh1dtcross*cg1*sinc1))*u1 + (-j1n*(di1dtcross*cg1 + dh1dtcross*sg1*sinc1))*v1 + ((-e1n/j1n)*de1dtcross)*n1;
+    //de2dt += (e2n*(dh1dtcross*cinc2))*v2 + (e2n*(-1*dh1dtcross*cg2*sinc2))*n2;
+    //dj2dt += (j2n*(dh1dtcross*cg2*sinc2))*u2 + (-j2n*(dh1dtcross*sg2*sinc2))*v2;
     dadt  += (dp1dtcross + 2. * a1 * e1n * de1dtcross) / sqr(j1n);
 
     // Outer binary terms are numerically insignificant
@@ -416,7 +429,6 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
     f[i+9] = de2dt[i];
   }
   f[12] = dadt;
-  f[13] = da2dt;
 
   return GSL_SUCCESS;
 }

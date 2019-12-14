@@ -17,7 +17,7 @@ using namespace std;
 #include <gsl/gsl_integration.h>
 
 #define sqr(x) ((x)*(x))
-#define DIMENSION 14
+#define DIMENSION 13
 
 #define PRI(x) {for (int __pri__ = 0; __pri__ < x; __pri__++) cerr << " ";}
 #define PR(x)  cerr << #x << " = " << x << " "
@@ -203,7 +203,6 @@ class kozai_struct
 				y[i+9] = e2_init[i];
 			}
 			y[12] = a1;
-		    y[13] = a2;
 		}
 
 		//The getters and setters for the class;
@@ -245,7 +244,7 @@ class kozai_struct
 
 		//Outer Binary
 		void set_a2(double a2_i) {a2=a2_i;}
-		double get_a2() {return y[13];}
+		double get_a2() {return a2;}
 
 		void set_ecc2(double e2_i) {e2=e2_i;}
 		double get_ecc2() {return abs(this->get_e2());}
