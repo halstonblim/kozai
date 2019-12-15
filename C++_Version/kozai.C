@@ -341,7 +341,7 @@ int rhs(double t, const double y[], double f[], void *kozai_ptr){
     double sinc1   = sqrt(1.-sqr(cinc1));
     double cscinc1 = 1 / sinc1;
     // double sinc2   = sqrt(1.-sqr(cinc2));
-    double cotinc1     = 1 / sinc1;
+    double cotinc1     = cinc1 / sinc1;
     double cotinc1sinc = cinc1 * sinc / sinc1;
     double cscinc1sinc = sinc / sinc1;
 
