@@ -1,4 +1,5 @@
 # Carl's Kozai Code
+# Added relativistic three-body effects from Halston and Carl
 
 For integrating the secular equations of motions for the three-body problem, 
 including the quadrupole and octupole terms (see Tremaine+2009, Petrovich2015 and Liu+2015)
@@ -9,17 +10,19 @@ Also includes relativistic terms for the inner binary, including:
 	Spin-Orbit coupling (ala Rodriguez and Antonini 2018, identical Barker and O'Connell 1975)  
 	Spin-Spin coupling (same)  
   
+Also includes cross terms from relativistic three-body effects (Lim and Rodriguez 2020)
+
 You are welcome to use either code in any way you like, though we ask that if you
 use any results from it in a paper that you cite Rodriguez and Antonini (2018, 
-https://arxiv.org/abs/1805.08212) and Antonini et al (2017, https://arxiv.org/abs/1711.07142) 
+https://arxiv.org/abs/1805.08212) and Antonini et al (2017, https://arxiv.org/abs/1711.07142), 
+and Lim and Rodriguez (2020, https://arxiv.org/abs/2001.03654)
 
 The code can be compiled with:
 	g++ -o kozai kozai.C -lgsl -lgslcblas -O3
 Then run ./kozai --help for a list of options.
 
 The default triple, when integrated with all the physics, i.e. 
-	./kozai --quad --oct --peri --rad 
-should recreate the left-hand panel of Figure 2 from Rodriguez and Antonini 2018
+	./kozai --quad --oct --peri --outerperi --rad --cross_lim
 
 Finally, top-level information about the system is printed to stdout,
 while the actual integration is printed to stderr
