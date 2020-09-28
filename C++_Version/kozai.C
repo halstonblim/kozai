@@ -9,6 +9,7 @@ Also includes relativistic terms for the inner binary, including:\n\
   Gravitational Wave emission (ala Blaes+2002)\n\
   Spin-Orbit coupling (ala me, following Barker and O'Connell 1975)\n\
   Spin-Spin coupling (same)\n\n\
+Also includes cross terms from relativistic three-body effects (Lim and Rodriguez 2020)\n\
 Options:\n\
   --no-int  don't integrate the system, just print info\n\
   --help    print this\n\n\
@@ -37,6 +38,7 @@ Flags:\n\
   --oct        Include octupole Terms\n\
   --peri       Include inner pericenter precession (1pN) terms\n\
   --outerperi  Include outer pericenter precession (1pN) terms\n\
+  --cross_lim  Include cross terms\n\
   --ignore_gsl Ignore errors from GSL (i.e. when a binary merges, the inner\n\
                binary can decouple from the outer s.t. the optimal timestep\n\
                for the inner is beyond machine-tolerance away from the outer)\n\
